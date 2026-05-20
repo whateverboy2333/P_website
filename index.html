@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Visual clone of Simone's Computer." />
+    <title>Simone's Computer</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="os-shell" aria-label="Simone's Computer clone">
+      <section class="window main-window" id="mainWindow">
+        <header class="titlebar">
+          <button class="system-dot" id="toggleBody" aria-label="Toggle body">●</button>
+          <strong class="titlebar-title">Computer.rb</strong>
+          <div class="titlebar-actions">
+            <button aria-label="Top">▲</button>
+            <button id="changeWallpaper" aria-label="Change wallpaper">▦</button>
+            <button id="powerOff" aria-label="Power off">◓</button>
+          </div>
+        </header>
+
+        <div class="window-body" id="mainBody">
+          <div class="desktop-area">
+            <div class="icon-grid" id="iconGrid"></div>
+            <button class="desktop-icon trash-icon" data-window="cestino">
+              <img src="public/icons/trash.gif" alt="trash" />
+              <span>Cestino</span>
+            </button>
+          </div>
+
+          <div class="footer-buttons">
+            <button data-window="website"><img src="public/icons/code.gif" alt="code" />About this website</button>
+            <a href="https://github.com/syxanash/syxanash.github.io/commits/development">
+              <button><img src="public/icons/clock.png" alt="clock" />Last updated May 8</button>
+            </a>
+          </div>
+
+          <footer class="statusbar">
+            <span>© Simone Marzulli <span>2026</span></span>
+            <div class="crt-toggle">
+              <span>CRT</span>
+              <button id="crtSwitch" aria-label="Enable CRT"><span></span></button>
+              <span>LCD</span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+      <div class="popup-layer" id="popupLayer"></div>
+    </main>
+
+    <div class="scan-lines" id="scanLines"></div>
+    <div class="power-screen" id="powerScreen">
+      <button id="wakeButton">Power on</button>
+    </div>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
