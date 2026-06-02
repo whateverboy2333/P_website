@@ -8,6 +8,8 @@ const types = new Map([
   [".css", "text/css"],
   [".js", "text/javascript"],
   [".gif", "image/gif"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
   [".png", "image/png"],
   [".md", "text/markdown"]
 ]);

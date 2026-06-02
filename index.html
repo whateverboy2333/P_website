@@ -7,26 +7,26 @@
     <title>Simone's Computer</title>
     <link rel="stylesheet" href="src/styles.css" />
   </head>
-  <body>
-    <main class="os-shell" aria-label="Simone's Computer clone">
+  <body class="boot-pending">
+    <main class="os-shell" aria-label="AI Trainer portfolio desktop">
       <section class="window main-window" id="mainWindow">
         <header class="titlebar">
-          <button class="system-dot" id="toggleBody" aria-label="Toggle body">●</button>
-          <strong class="titlebar-title">Computer.rb</strong>
+          <button class="system-dot" id="toggleBody" aria-label="Jolt window">●</button>
+          <strong class="titlebar-title">Sky_EYE.OS</strong>
           <div class="titlebar-actions">
-            <button aria-label="Top">▲</button>
+            <button id="collapseMainWindow" data-collapse aria-expanded="true" aria-label="Collapse window">▲</button>
             <button id="changeWallpaper" aria-label="Change wallpaper">▦</button>
             <button id="powerOff" aria-label="Power off">◓</button>
           </div>
         </header>
 
+        <div class="agent-silhouette" id="agentSilhouette" aria-hidden="true">
+          <img src="public/characters/stray-ai-character.png" alt="" />
+        </div>
+
         <div class="window-body" id="mainBody">
           <div class="desktop-area">
             <div class="icon-grid" id="iconGrid"></div>
-            <button class="desktop-icon trash-icon" data-window="cestino">
-              <img src="public/icons/trash.gif" alt="trash" />
-              <span>Cestino</span>
-            </button>
           </div>
 
           <div class="footer-buttons">
@@ -37,20 +37,115 @@
           </div>
 
           <footer class="statusbar">
-            <span>© Simone Marzulli <span>2026</span></span>
+            <span>@天目系统 2026</span>
             <div class="crt-toggle">
-              <span>CRT</span>
-              <button id="crtSwitch" aria-label="Enable CRT"><span></span></button>
-              <span>LCD</span>
+              <button id="crtSwitch" aria-label="Enable inverted colors"><span></span></button>
             </div>
           </footer>
+        </div>
+      </section>
+
+      <section class="agent-prank" id="agentPrank" aria-hidden="true">
+        <div class="agent-prank-dialog" role="status">
+          <p>还愣着干什么，快拉我上去！</p>
+        </div>
+        <button class="agent-prank-character" id="agentPrankCharacter" type="button" aria-label="Pull STRAY.AI up">
+          <img src="public/characters/stray-ai-hang-no-edge.png" alt="STRAY.AI hanging from the window" />
+        </button>
+      </section>
+
+      <section class="hidden-agent" id="hiddenAgent" aria-hidden="true">
+        <div class="agent-character-wrap">
+          <img class="agent-character" src="public/characters/stray-ai-character.png" alt="STRAY.AI hidden character" />
+        </div>
+        <div class="agent-dialog" role="status" aria-live="polite">
+          <div class="agent-dialog-title">GLITCH</div>
+          <p id="agentDialogText"></p>
+          <button class="agent-next" id="agentNext" type="button" aria-label="Continue STRAY.AI dialog">▼</button>
         </div>
       </section>
 
       <div class="popup-layer" id="popupLayer"></div>
     </main>
 
+    <div class="boot-screen" id="bootScreen" aria-label="Sky_EYE.OS startup">
+      <button class="boot-intrusion" id="bootIntrusion" type="button" aria-label="开始入侵 Sky_EYE.OS">
+        <span class="boot-eye-stage" aria-hidden="true">
+          <img
+            class="boot-eye-still boot-eye-closed"
+            src="public/boot/sky-eye-real-closed.png"
+            alt=""
+            width="444"
+            height="444"
+            loading="eager"
+            decoding="sync"
+            fetchpriority="high"
+          />
+          <img
+            class="boot-eye-animation"
+            id="bootEyeAnimation"
+            data-animation-src="public/boot/sky-eye-real-open.gif"
+            alt=""
+            width="444"
+            height="444"
+            loading="eager"
+            decoding="sync"
+          />
+          <img
+            class="boot-eye-still boot-eye-open-final"
+            src="public/boot/sky-eye-real-open.png"
+            alt=""
+            width="444"
+            height="444"
+            loading="eager"
+            decoding="sync"
+          />
+        </span>
+        <span class="boot-start-text">&lt; 开 始 入 侵 &gt;</span>
+      </button>
+
+      <section class="boot-progress-panel" id="bootProgressPanel" aria-hidden="true">
+        <div class="boot-progress-eye-stage" aria-hidden="true">
+          <img src="public/boot/sky-eye-real-open.png" alt="" width="444" height="444" loading="eager" decoding="sync" />
+        </div>
+        <div class="boot-hud boot-hud-left">
+          <p>SYSTEM INITIATED</p>
+          <p>USER: GUEST_01</p>
+          <p>STATUS: CONNECTED</p>
+          <br />
+          <p>&gt; START INTRUSION...</p>
+          <p>&gt;&gt; SCANNING NETWORK... [OK]</p>
+          <p>&gt;&gt; BYPASSING FIREWALL...</p>
+          <p>&gt;&gt; DECRYPTING DATA...</p>
+          <p>&gt;&gt; ESTABLISHING BACKDOOR...</p>
+        </div>
+        <div class="boot-hud boot-hud-right">
+          <p>IP TRACE</p>
+          <div class="boot-map" aria-hidden="true"></div>
+          <p>LOCATION UNKNOWN</p>
+          <p>ROOT ACCESS</p>
+        </div>
+        <div class="boot-progress-copy">
+          <div class="boot-state-text">&lt; 入 侵 中 &gt;</div>
+          <div class="boot-progress-label">INTRUDING...</div>
+          <div class="boot-progress-line">
+            <span class="boot-progress-fill" id="bootProgressFill"></span>
+            <span class="boot-progress-percent" id="bootProgressPercent">0%</span>
+          </div>
+          <div class="boot-progress-status" id="bootProgressStatus">正在突破防火墙...</div>
+        </div>
+      </section>
+
+      <section class="boot-terminal" id="bootTerminal" aria-hidden="true">
+        <div class="boot-terminal-icons" id="bootTerminalIcons" aria-hidden="true"></div>
+        <div class="boot-terminal-output" id="bootTerminalOutput" aria-live="polite"></div>
+      </section>
+    </div>
+
     <div class="scan-lines" id="scanLines"></div>
+    <div class="screensaver" id="screensaver" aria-hidden="true">
+      <div class="screensaver-stage" id="screensaverStage"></div>
+    </div>
     <div class="power-screen" id="powerScreen">
       <button id="wakeButton">Power on</button>
     </div>
