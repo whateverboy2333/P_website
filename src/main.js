@@ -6,24 +6,85 @@ const icons = [
   { label: "IP design", icon: "ip-design.gif", window: "ip" },
   { label: "My World", icon: "my-world-city.gif", window: "myWorld", size: "city" },
   { label: "Music", icon: "music.gif", window: "music" },
-  { label: "Guest", icon: "guestbook.png", window: "guest" },
+  { label: "Guest book", icon: "guestbook.gif", window: "guest" },
   { label: "AIGC TV", icon: "looptv.gif", window: "aigcTv" },
-  { label: "Dont Click", icon: "corrupted.gif", window: "dontClick" }
+  { label: "Don’t Click", icon: "corrupted.gif", window: "dontClick" }
+];
+
+const dontClickSteps = [
+  {
+    id: "empty-ui",
+    text: "这个UI啥也干不了",
+    buttons: [{ label: "OK", next: "broken-ui" }]
+  },
+  {
+    id: "broken-ui",
+    text: "这个UI坏了。",
+    buttons: [{ label: "我知道了", next: "maintenance" }]
+  },
+  {
+    id: "maintenance",
+    text: "关掉窗口吧，我后续会维护的",
+    buttons: [{ label: "OK", next: "idle-check" }]
+  },
+  {
+    id: "idle-check",
+    text: "你还真是有够闲的是吧？",
+    buttons: [
+      { label: "是的", next: "nothing-here" },
+      { label: "不是的", next: "nothing-here" }
+    ]
+  },
+  {
+    id: "nothing-here",
+    text: "你就一直点吧，这啥也没有",
+    buttons: [{ label: "OK", next: "ai-interesting" }]
+  },
+  {
+    id: "ai-interesting",
+    text: "AI真是太有意思了",
+    buttons: [{ label: "OK", next: "expectation-check" }]
+  },
+  {
+    id: "expectation-check",
+    text: "你觉得一直按下去会有东西吗？",
+    buttons: [
+      { label: "包的", next: "site-fun-check" },
+      { label: "不知道", next: "site-fun-check" }
+    ]
+  },
+  {
+    id: "site-fun-check",
+    text: "哇哦，你还在啊，好吧，最后一个问题，你觉得这个网站好玩吗？",
+    buttons: [
+      { label: "好玩", next: "fun-pending" },
+      { label: "不好玩", next: "not-fun-pending" }
+    ]
+  },
+  {
+    id: "fun-pending",
+    text: "好玩——",
+    buttons: []
+  },
+  {
+    id: "not-fun-pending",
+    text: "不好玩——",
+    buttons: []
+  }
 ];
 
 const windows = {
   about: {
     title: "About.txt",
+    className: "about-window",
     body: `
-      <div class="popup-content">
-        <img class="avatar" src="public/icons/about.gif" alt="">
-        <p>Hello there, I'm Simone Marzulli and I'm a full-stack software engineer, open source enthusiast and piadina lover!</p>
-        <p>This page recreates the warm, chaotic personal-computer desktop feeling of the original site.</p>
-        <div class="link-list">
-          <a href="https://github.com/syxanash">GitHub</a>
-          <a href="https://blog.simone.computer">Blog</a>
-          <a href="mailto:hello@simone.computer">Email</a>
-        </div>
+      <div class="popup-content about-profile">
+        <img class="avatar about-avatar" src="public/profile/about-avatar.png" alt="姚添木头像">
+        <p>你好，我是姚添木，一名 AI 训练师。</p>
+        <p>我的工作是让 AI 变得更聪明、更可靠。从 NLP 实体标注到多模态视频数据建设，从 RAG 系统评测到 Agent 多步工具调用的轨迹归因，我在 MiniMax 和同程旅行两家公司的核心 AI 产品线上，完整经历了数据标注、质量评测、缺陷归因到模型迭代的全链路闭环。简单来说，我做的事情就是找到 AI 犯错的原因，然后帮它改正。</p>
+        <p>我擅长把复杂的问题拆解成可量化的评估框架。在同程旅行，我带领团队完成了两万余条 Agent 轨迹的系统性评测，将工具选择准确率从 65% 推到了 88%；在 MiniMax，我参与支撑了海螺视频模型的多轮版本迭代，帮助团队将评测一致性稳定在高水平。我也喜欢用自动化解决重复劳动——搭建过 Coze 预审工作流和 Python 质量监控脚本，把评测效率直接提升了 50%。</p>
+        <p>除此之外，我有民航空管专业背景，独立搭建过 NER 模型（F1 达 92%+），这段经历让我养成了对精确性近乎执着的习惯——无论是一条航管指令还是一个 API 参数，细节决定一切。</p>
+        <p>工作之外，我对前沿 AI 技术保持着持续的好奇心，喜欢探索各类 AI 工具的新玩法。闲暇时也会读书、跑步，偶尔折腾一些有趣的 side project。如果你对 AI 数据质量、模型评测或智能体有任何想聊的话题，欢迎随时联系我。</p>
       </div>`
   },
   project: {
@@ -81,13 +142,25 @@ const windows = {
       </div>`
   },
   guest: {
-    title: "Guest.db",
+    title: "Guest book",
     className: "guestbook",
     body: `
-      <div class="popup-content guestbook">
-        <p><strong>Guest</strong></p>
-        <p>Reserved for guest messages, recommendations, or selected feedback.</p>
-        <p class="guestbook-warning-text">This module is kept as a future social-proof slot.</p>
+      <div class="guestbook-panel" data-guestbook-root>
+        <form class="guestbook-form" data-guestbook-form autocomplete="off">
+          <label class="guestbook-field">
+            <span>Name:</span>
+            <input name="name" type="text" maxlength="24" placeholder="your name..." required>
+          </label>
+          <label class="guestbook-field">
+            <span>Comment:</span>
+            <textarea name="comment" maxlength="240" placeholder="write whatever you want here!" required></textarea>
+          </label>
+          <div class="guestbook-actions">
+            <button class="retro-button guestbook-submit" type="submit">[ COMMENT ] &gt;&gt; CAPTURE THE SIGNAL &lt;&lt;</button>
+            <span class="guestbook-count" data-guestbook-count aria-live="polite"></span>
+          </div>
+        </form>
+        <div class="guestbook-feed" data-guestbook-feed aria-live="polite"></div>
       </div>`
   },
   aigcTv: {
@@ -100,11 +173,14 @@ const windows = {
       </div>`
   },
   dontClick: {
-    title: "Dont Click",
+    title: "Don’t Click",
+    className: "dont-click-body",
+    closeOnly: true,
     body: `
-      <div class="popup-content">
-        <p><strong>Signal unstable.</strong></p>
-        <p>This slot is intentionally reserved for a playful warning or hidden interaction.</p>
+      <div class="popup-content dont-click-content" data-dont-click-flow>
+        <p class="dont-click-kicker">ACCESS BREACH</p>
+        <p class="dont-click-message" data-dont-click-message>${dontClickSteps[0].text}</p>
+        <div class="dont-click-actions" data-dont-click-actions></div>
       </div>`
   },
   website: {
@@ -121,6 +197,24 @@ let zIndex = 20;
 let wallpaperIndex = 0;
 let promotedMainName = null;
 let mainWindowCollapsedBeforePromotion = false;
+const guestbookStorageKey = "ytmGuestbookEntries";
+const guestbookEntryLimit = 24;
+let guestbookMemoryEntries = null;
+
+const guestbookDefaultEntries = [
+  {
+    id: "sample-kicker",
+    name: "kicker",
+    comment: "I like the sound when you click the button",
+    createdAt: "2026-06-03T07:20:36.000Z"
+  },
+  {
+    id: "sample-sam",
+    name: "Sam",
+    comment: "Signed in before the signal fades.",
+    createdAt: "2026-06-03T07:32:10.000Z"
+  }
+];
 
 const titlebarGlyphs = {
   dot: "\u25cf",
@@ -132,16 +226,16 @@ const titlebarGlyphs = {
 };
 
 const wallpaperClasses = [
-  "wallpaper-cyber-city",
-  "wallpaper-cyber-terminal",
+  "wallpaper-cyber-nerv",
   "wallpaper-cyber-rider",
   "wallpaper-cyber-zen",
-  "wallpaper-cyber-emoji",
-  "wallpaper-cyber-hud",
-  "wallpaper-cyber-nerv",
   "wallpaper-cyber-statue",
   "wallpaper-cyber-white-archive",
   "wallpaper-cyber-spider",
+  "wallpaper-dark-dungeon",
+  "wallpaper-occult-dungeon",
+  "wallpaper-doraemon-sky",
+  "wallpaper-cute-cats",
   "wallpaper-clouds"
 ];
 
@@ -159,19 +253,26 @@ const bootProgressStatus = document.querySelector("#bootProgressStatus");
 const bootTerminal = document.querySelector("#bootTerminal");
 const bootTerminalIcons = document.querySelector("#bootTerminalIcons");
 const bootTerminalOutput = document.querySelector("#bootTerminalOutput");
+const githubProjectLink = document.querySelector("#githubProjectLink");
+const githubUpdatedText = document.querySelector("#githubUpdatedText");
 const invertSafetyConsentKey = "portfolioInvertSafetyConsent";
 const screensaver = document.querySelector("#screensaver");
 const screensaverStage = document.querySelector("#screensaverStage");
+const centralEye = document.querySelector("#centralEye");
 const hiddenAgent = document.querySelector("#hiddenAgent");
 const agentSilhouette = document.querySelector("#agentSilhouette");
 const agentDialogText = document.querySelector("#agentDialogText");
 const agentNext = document.querySelector("#agentNext");
+const agentEyeHotspot = document.querySelector("#agentEyeHotspot");
 const agentPrank = document.querySelector("#agentPrank");
 const agentPrankCharacter = document.querySelector("#agentPrankCharacter");
 const agentPrankImage = agentPrankCharacter?.querySelector("img");
 const originalMainChildren = Array.from(mainWindow.children);
 const pressableSelector = "button, .desktop-icon, .link-list a";
+const clickSoundExcludedSelector = "#agentNext, #agentPrankCharacter, #agentEyeHotspot, .agent-dialog, .agent-prank";
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const githubProjectUrl = "https://github.com/whateverboy2333/P_website";
+const githubLatestCommitApi = "https://api.github.com/repos/whateverboy2333/P_website/commits/main";
 const screensaverConfig = {
   frameCount: 32,
   idleDelay: 45000,
@@ -234,6 +335,9 @@ let agentTypingTimer;
 let mainJoltCount = 0;
 let mainWindowExpandedHeight = 0;
 let invertSafetyConsentGranted = readInvertSafetyConsent();
+let clickAudioContext;
+let agentEyeAlertArmed = true;
+const agentEyeAlertMessage = "嘿！不要动我的眼睛！";
 
 const agentMessages = [
   "嘿嘿，我看你在摆弄这个网站啊，让你发现了。",
@@ -270,6 +374,49 @@ function setPressing(element) {
   element.classList.add("is-pressing");
 }
 
+function getSoundTarget(target) {
+  const element = target?.closest?.(pressableSelector);
+  if (!element || element.disabled || element.classList.contains("disabled")) return null;
+  if (element.closest(clickSoundExcludedSelector)) return null;
+  return element;
+}
+
+function getClickAudioContext() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  clickAudioContext ??= new AudioContext();
+  return clickAudioContext;
+}
+
+function playClickSound() {
+  const context = getClickAudioContext();
+  if (!context) return;
+
+  const now = context.currentTime;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  if (context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
+
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(1280, now);
+  oscillator.frequency.exponentialRampToValueAtTime(520, now + 0.035);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.045, now + 0.004);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.055);
+}
+
+function handleClickSound(event) {
+  if (!getSoundTarget(event.target)) return;
+  playClickSound();
+}
+
 function getCookie(name) {
   const encodedName = `${encodeURIComponent(name)}=`;
   return document.cookie
@@ -285,6 +432,176 @@ function setCookie(name, value, maxAgeSeconds) {
 
 function deleteCookie(name) {
   document.cookie = `${encodeURIComponent(name)}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+function formatGithubUpdatedDate(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "Asia/Shanghai"
+  }).format(date);
+}
+
+async function syncGithubProjectStatus() {
+  if (githubProjectLink) {
+    githubProjectLink.href = githubProjectUrl;
+  }
+  if (!githubUpdatedText) return;
+
+  try {
+    const response = await fetch(githubLatestCommitApi, { cache: "no-store" });
+    if (!response.ok) return;
+
+    const commit = await response.json();
+    const updatedDate = formatGithubUpdatedDate(commit?.commit?.committer?.date || commit?.commit?.author?.date);
+    if (!updatedDate) return;
+
+    githubUpdatedText.textContent = `Last updated ${updatedDate}`;
+    if (githubProjectLink && commit?.html_url) {
+      githubProjectLink.title = `Latest commit: ${commit.html_url}`;
+    }
+  } catch {
+    // Keep the static fallback when GitHub is unreachable.
+  }
+}
+
+function normalizeGuestbookName(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 24);
+}
+
+function normalizeGuestbookComment(value) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 240);
+}
+
+function normalizeGuestbookEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+
+  return entries
+    .map((entry) => ({
+      id: String(entry?.id || `entry-${Date.now()}`),
+      name: normalizeGuestbookName(entry?.name),
+      comment: normalizeGuestbookComment(entry?.comment),
+      createdAt: String(entry?.createdAt || new Date().toISOString())
+    }))
+    .filter((entry) => entry.name && entry.comment)
+    .slice(0, guestbookEntryLimit);
+}
+
+function readGuestbookEntries() {
+  if (guestbookMemoryEntries) return guestbookMemoryEntries;
+
+  try {
+    const savedEntries = JSON.parse(window.localStorage.getItem(guestbookStorageKey) || "null");
+    const entries = normalizeGuestbookEntries(savedEntries);
+    if (entries.length > 0) {
+      guestbookMemoryEntries = entries;
+      return guestbookMemoryEntries;
+    }
+  } catch {
+    // Fall back to the in-memory seed when localStorage is unavailable or corrupt.
+  }
+
+  guestbookMemoryEntries = normalizeGuestbookEntries(guestbookDefaultEntries);
+  return guestbookMemoryEntries;
+}
+
+function writeGuestbookEntries(entries) {
+  guestbookMemoryEntries = normalizeGuestbookEntries(entries);
+
+  try {
+    window.localStorage.setItem(guestbookStorageKey, JSON.stringify(guestbookMemoryEntries));
+  } catch {
+    // The current session still updates through guestbookMemoryEntries.
+  }
+}
+
+function formatGuestbookTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "time unknown";
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Shanghai"
+  }).formatToParts(date);
+
+  const getPart = (type) => parts.find((part) => part.type === type)?.value || "";
+  return `${getPart("year")}/${getPart("month")}/${getPart("day")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")}`;
+}
+
+function createGuestbookEntryElement(entry) {
+  const card = document.createElement("article");
+  card.className = "guestbook-entry";
+
+  const name = document.createElement("h3");
+  name.textContent = entry.name;
+
+  const comment = document.createElement("p");
+  comment.textContent = entry.comment;
+
+  const time = document.createElement("time");
+  time.dateTime = entry.createdAt;
+  time.textContent = formatGuestbookTimestamp(entry.createdAt);
+
+  card.append(name, comment, time);
+  return card;
+}
+
+function renderGuestbookEntries(scope = document) {
+  const entries = readGuestbookEntries();
+  const root = scope instanceof Element ? scope : document;
+  const feeds = root.querySelectorAll("[data-guestbook-feed]");
+  const counts = root.querySelectorAll("[data-guestbook-count]");
+
+  feeds.forEach((feed) => {
+    feed.replaceChildren(...entries.map(createGuestbookEntryElement));
+  });
+
+  counts.forEach((count) => {
+    count.textContent = `${String(entries.length).padStart(2, "0")} LOGS`;
+  });
+}
+
+function initializeGuestbook(scope = document) {
+  renderGuestbookEntries(scope);
+  const root = scope instanceof Element ? scope : document;
+  root.querySelector("[data-guestbook-form] input[name='name']")?.focus({ preventScroll: true });
+}
+
+function submitGuestbookEntry(form) {
+  const formData = new FormData(form);
+  const name = normalizeGuestbookName(formData.get("name"));
+  const comment = normalizeGuestbookComment(formData.get("comment"));
+
+  if (!name || !comment) {
+    form.classList.add("has-error");
+    window.setTimeout(() => form.classList.remove("has-error"), 220);
+    return;
+  }
+
+  const entry = {
+    id: `entry-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    comment,
+    createdAt: new Date().toISOString()
+  };
+
+  writeGuestbookEntries([entry, ...readGuestbookEntries()]);
+  renderGuestbookEntries();
+  form.reset();
+  form.querySelector("input[name='name']")?.focus({ preventScroll: true });
+  pulseLoadingCursor(180);
 }
 
 function shouldShowBoot() {
@@ -676,6 +993,7 @@ function revealHiddenAgent() {
   syncAgentScale();
   hiddenAgent.classList.add("is-visible");
   hiddenAgent.setAttribute("aria-hidden", "false");
+  agentEyeAlertArmed = true;
 
   if (wasVisible) return;
 
@@ -688,6 +1006,17 @@ function hideHiddenAgent() {
   window.clearTimeout(agentTypingTimer);
   hiddenAgent.classList.remove("is-visible");
   hiddenAgent.setAttribute("aria-hidden", "true");
+  agentEyeAlertArmed = true;
+}
+
+function showAgentEyeAlert() {
+  if (!hiddenAgent?.classList.contains("is-visible") || !agentEyeAlertArmed) return;
+  agentEyeAlertArmed = false;
+  window.alert(agentEyeAlertMessage);
+}
+
+function resetAgentEyeAlert() {
+  agentEyeAlertArmed = true;
 }
 
 function clearAgentPrankHelpTimer() {
@@ -785,6 +1114,7 @@ function toggleWindowCollapsed(windowElement) {
 function removePromotedMainContent() {
   mainWindow.querySelectorAll('[data-promoted-main="true"]').forEach((element) => element.remove());
   mainWindow.classList.remove("is-promoted", "is-collapsed");
+  delete mainWindow.dataset.promotedWindow;
   promotedMainName = null;
 }
 
@@ -832,8 +1162,10 @@ function promotePopupToMain(popup) {
 
   mainWindow.replaceChildren(promotedTitlebar, promotedBody);
   mainWindow.classList.add("is-promoted");
+  mainWindow.dataset.promotedWindow = name;
   promotedMainName = name;
   popup.remove();
+  if (name === "guest") initializeGuestbook(mainWindow);
   pulseLoadingCursor(180);
 }
 
@@ -1003,7 +1335,33 @@ function resetScreensaverFromActivity() {
   }
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function setCentralEyeGaze(event) {
+  if (!centralEye) return;
+
+  const rect = centralEye.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const normalizedX = (event.clientX - centerX) / Math.max(1, window.innerWidth / 2);
+  const normalizedY = (event.clientY - centerY) / Math.max(1, window.innerHeight / 2);
+  const vectorLength = Math.hypot(normalizedX, normalizedY);
+  const circularScale = vectorLength > 1 ? 1 / vectorLength : 1;
+  const pupilOffset = rect.width * 0.095;
+  const eyeX = normalizedX * circularScale * pupilOffset;
+  const eyeY = normalizedY * circularScale * pupilOffset;
+
+  centralEye.style.setProperty("--eye-x", `${Math.round(eyeX * 10) / 10}px`);
+  centralEye.style.setProperty("--eye-y", `${Math.round(eyeY * 10) / 10}px`);
+}
+
 function handleScreensaverPointerMove(event) {
+  setCentralEyeGaze(event);
+
   if (!lastPointerPosition) {
     lastPointerPosition = { x: event.clientX, y: event.clientY };
     if (!isScreensaverActive()) scheduleScreensaver();
@@ -1038,6 +1396,8 @@ function createIcon(item) {
 }
 
 icons.forEach((item) => iconGrid.appendChild(createIcon(item)));
+
+document.addEventListener("click", handleClickSound, { capture: true });
 
 document.addEventListener("pointerdown", (event) => {
   setPressing(event.target.closest(pressableSelector));
@@ -1074,6 +1434,14 @@ document.addEventListener("keyup", (event) => {
   releasePressing();
 });
 
+document.addEventListener("submit", (event) => {
+  const form = event.target?.closest?.("[data-guestbook-form]");
+  if (!form) return;
+
+  event.preventDefault();
+  submitGuestbookEntry(form);
+});
+
 agentNext.addEventListener("click", () => {
   const currentAgentMessages = getCurrentAgentMessages();
   if (agentMessageIndex >= currentAgentMessages.length - 1) {
@@ -1084,6 +1452,9 @@ agentNext.addEventListener("click", () => {
   agentMessageIndex += 1;
   typeAgentMessage(currentAgentMessages[agentMessageIndex]);
 });
+
+agentEyeHotspot?.addEventListener("mouseenter", showAgentEyeAlert);
+agentEyeHotspot?.addEventListener("mouseleave", resetAgentEyeAlert);
 
 agentPrankCharacter?.addEventListener("click", () => {
   if (agentPrankState === "hanging") {
@@ -1139,6 +1510,102 @@ document.addEventListener("click", (event) => {
   if (closeButton) closeButton.closest(".popup")?.remove();
 });
 
+function getDontClickStep(stepId) {
+  return dontClickSteps.find((step) => step.id === stepId) || dontClickSteps[0];
+}
+
+function renderDontClickStep(popup, stepId = dontClickSteps[0].id) {
+  const root = popup?.querySelector("[data-dont-click-flow]");
+  if (!root) return;
+
+  const step = getDontClickStep(stepId);
+  const message = root.querySelector("[data-dont-click-message]");
+  const actions = root.querySelector("[data-dont-click-actions]");
+  if (!message || !actions) return;
+
+  root.dataset.currentStep = step.id;
+  root.classList.toggle("is-terminal", step.buttons.length === 0);
+  message.textContent = step.text;
+  actions.replaceChildren(...step.buttons.map((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dont-click-choice";
+    button.dataset.dontClickNext = item.next;
+    button.textContent = item.label;
+    return button;
+  }));
+
+  popup.classList.remove("is-flow-shifting");
+  void popup.offsetWidth;
+  popup.classList.add("is-flow-shifting");
+}
+
+function initializeDontClickFlow(popup) {
+  const root = popup?.querySelector("[data-dont-click-flow]");
+  if (!root || root.dataset.flowReady === "true") return;
+
+  root.dataset.flowReady = "true";
+  renderDontClickStep(popup);
+  root.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-dont-click-next]");
+    if (!button || !root.contains(button)) return;
+
+    event.stopPropagation();
+    renderDontClickStep(popup, button.dataset.dontClickNext);
+  });
+}
+
+function resetDontClickTilt(popup) {
+  popup.style.setProperty("--tilt-x", "0deg");
+  popup.style.setProperty("--tilt-y", "0deg");
+}
+
+function initializeDontClickWindow(popup) {
+  if (!popup || popup.dataset.tiltReady === "true") return;
+
+  initializeDontClickFlow(popup);
+  popup.dataset.tiltReady = "true";
+  resetDontClickTilt(popup);
+
+  function updateTilt(event) {
+    if (reducedMotionQuery.matches) return;
+
+    const rect = popup.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const normalizedX = clamp((event.clientX - rect.left - rect.width / 2) / (rect.width / 2), -1, 1);
+    const normalizedY = clamp((event.clientY - rect.top - rect.height / 2) / (rect.height / 2), -1, 1);
+
+    popup.classList.add("is-tilting");
+    popup.style.setProperty("--tilt-x", `${(normalizedY * 8).toFixed(2)}deg`);
+    popup.style.setProperty("--tilt-y", `${(-normalizedX * 10).toFixed(2)}deg`);
+  }
+
+  function clearTilt() {
+    popup.classList.remove("is-tilting");
+    resetDontClickTilt(popup);
+  }
+
+  popup.addEventListener("pointermove", updateTilt);
+  popup.addEventListener("mousemove", updateTilt);
+  popup.addEventListener("pointerleave", clearTilt);
+  popup.addEventListener("pointercancel", clearTilt);
+  popup.addEventListener("mouseleave", clearTilt);
+
+  const closeZone = popup.querySelector(".titlebar-close-only .titlebar-actions");
+  closeZone?.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+  });
+  closeZone?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    popup.remove();
+  });
+  popup.querySelector("[data-close]")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    popup.remove();
+  });
+}
+
 function openWindow(name) {
   const config = windows[name];
   if (!config) return;
@@ -1146,6 +1613,8 @@ function openWindow(name) {
   const existing = document.querySelector(`[data-popup="${name}"]`);
   if (existing) {
     existing.style.setProperty("--z", ++zIndex);
+    if (name === "guest") initializeGuestbook(existing);
+    if (name === "dontClick") initializeDontClickWindow(existing);
     return;
   }
 
@@ -1153,18 +1622,25 @@ function openWindow(name) {
   popup.className = "window popup";
   popup.dataset.popup = name;
   popup.style.setProperty("--z", ++zIndex);
-  popup.innerHTML = `
-    <header class="titlebar">
-      <button class="system-dot" data-jolt aria-label="Jolt window">${titlebarGlyphs.dot}</button>
-      <strong class="titlebar-title">${config.title}</strong>
+  const titlebarControls = config.closeOnly
+    ? `<div class="titlebar-actions">
+        <button data-close aria-label="Close">${titlebarGlyphs.close}</button>
+      </div>`
+    : `<button class="system-dot" data-jolt aria-label="Jolt window">${titlebarGlyphs.dot}</button>
       <div class="titlebar-actions">
         <button data-collapse aria-expanded="true" aria-label="Collapse window">${titlebarGlyphs.collapseOpen}</button>
         <button data-promote aria-label="Use as main window">${titlebarGlyphs.grid}</button>
         <button data-close aria-label="Close">${titlebarGlyphs.close}</button>
-      </div>
+      </div>`;
+  popup.innerHTML = `
+    <header class="titlebar${config.closeOnly ? " titlebar-close-only" : ""}">
+      <strong class="titlebar-title">${config.title}</strong>
+      ${titlebarControls}
     </header>
     <div class="window-body ${config.className || ""}">${config.body}</div>`;
   popupLayer.appendChild(popup);
+  if (name === "guest") initializeGuestbook(popup);
+  if (name === "dontClick") initializeDontClickWindow(popup);
   makeDraggable(popup);
 }
 
@@ -1228,6 +1704,7 @@ document.querySelector("#wakeButton").addEventListener("click", () => {
 syncStaticTitlebarGlyphs();
 syncInvertSwitch();
 syncAgentScale();
+syncGithubProjectStatus();
 const bootVisible = initializeBootSequence();
 if (screensaverPreviewMode) {
   window.setTimeout(startScreensaver, 300);

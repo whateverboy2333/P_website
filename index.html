@@ -31,15 +31,25 @@
 
           <div class="footer-buttons">
             <button data-window="website"><img src="public/icons/code.gif" alt="code" />About this website</button>
-            <a href="https://github.com/syxanash/syxanash.github.io/commits/development">
-              <button><img src="public/icons/clock.png" alt="clock" />Last updated May 8</button>
+            <a
+              id="githubProjectLink"
+              href="https://github.com/whateverboy2333/P_website"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <button id="githubUpdatedButton" type="button">
+                <img src="public/icons/clock.png" alt="clock" />
+                <span id="githubUpdatedText">Last updated Jun 3</span>
+              </button>
             </a>
           </div>
 
           <footer class="statusbar">
             <span>@天目系统 2026</span>
             <div class="crt-toggle">
+              <span class="crt-toggle-label" aria-hidden="true">关</span>
               <button id="crtSwitch" aria-label="Enable inverted colors"><span></span></button>
+              <span class="crt-toggle-label" aria-hidden="true">开</span>
             </div>
           </footer>
         </div>
@@ -57,6 +67,12 @@
       <section class="hidden-agent" id="hiddenAgent" aria-hidden="true">
         <div class="agent-character-wrap">
           <img class="agent-character" src="public/characters/stray-ai-character.png" alt="STRAY.AI hidden character" />
+          <button
+            class="agent-eye-hotspot"
+            id="agentEyeHotspot"
+            type="button"
+            aria-label="嘿！不要动我的眼睛！"
+          ></button>
         </div>
         <div class="agent-dialog" role="status" aria-live="polite">
           <div class="agent-dialog-title">GLITCH</div>
@@ -143,6 +159,28 @@
     </div>
 
     <div class="scan-lines" id="scanLines"></div>
+    <div class="central-eye" id="centralEye" aria-hidden="true">
+      <div class="central-eye-stage">
+        <img
+          class="central-eye-image"
+          src="public/center-eye/ytm-cyber-eye-base.png"
+          alt=""
+          width="1254"
+          height="1254"
+          decoding="async"
+        />
+        <span class="central-eye-gaze">
+          <img
+            class="central-eye-pupil"
+            src="public/center-eye/ytm-cyber-eye-pupil-module.png"
+            alt=""
+            width="637"
+            height="637"
+            decoding="async"
+          />
+        </span>
+      </div>
+    </div>
     <div class="screensaver" id="screensaver" aria-hidden="true">
       <div class="screensaver-stage" id="screensaverStage"></div>
     </div>
