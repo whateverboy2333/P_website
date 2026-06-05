@@ -3,7 +3,7 @@ const icons = [
   { label: "Project", icon: "projects.gif", window: "project", size: "large" },
   { label: "Contact", icon: "contact.gif", window: "contact", size: "large" },
   { label: "Blog", icon: "blog.gif", window: "blog", size: "xlarge" },
-  { label: "IP design", icon: "ip-design.gif", window: "ip" },
+  { label: "IP design", icon: "ip-design.gif", window: "ipDesign" },
   { label: "My World", icon: "my-world-city.gif", window: "myWorld", size: "city" },
   { label: "Music", icon: "music.gif", window: "music" },
   { label: "Guest book", icon: "guestbook.gif", window: "guest" },
@@ -57,8 +57,8 @@ const dontClickSteps = [
     id: "site-fun-check",
     text: "哇哦，你还在啊，好吧，最后一个问题，你觉得这个网站好玩吗？",
     buttons: [
-      { label: "好玩", next: "fun-pending" },
-      { label: "不好玩", next: "not-fun-pending" }
+      { label: "好玩", action: "open-game-preview" },
+      { label: "不好玩", action: "avoid-unfun" }
     ]
   },
   {
@@ -197,6 +197,29 @@ let zIndex = 20;
 let wallpaperIndex = 0;
 let promotedMainName = null;
 let mainWindowCollapsedBeforePromotion = false;
+let aigcTvOverlay = null;
+let aigcTvCurrentIndex = 0;
+let aigcTvSwitchTimer = null;
+let aigcTvPromptOpen = false;
+let reservedGameOverlay = null;
+let reservedGameTimer = 0;
+let abyssGameState = null;
+let dontClickVirusLayer = null;
+let dontClickVirusInterval = 0;
+let dontClickVirusCount = 0;
+const abyssGameAssets = Object.freeze({
+  background: "public/game/data-gate.png",
+  river: "public/game/data-river-loop.gif",
+  eye: "public/game/eye-blink-clean.gif",
+  mouth: "public/game/abyss-mouth-clean.png",
+  reporter: "public/game/glitch-reporter.png"
+});
+const abyssGameConfig = Object.freeze({
+  eyeCount: 15,
+  durationMs: 42000,
+  mouthStartScale: 0.66,
+  mouthEndScale: 1.92
+});
 const guestbookStorageKey = "ytmGuestbookEntries";
 const guestbookEntryLimit = 24;
 let guestbookMemoryEntries = null;
@@ -239,9 +262,47 @@ const wallpaperClasses = [
   "wallpaper-clouds"
 ];
 
+const aigcChannels = [
+  {
+    id: "AV-01",
+    title: "AILY：你看起来好孤独",
+    task: "Veo 文生视频 / 赛博朋克电影叙事",
+    role: "提示词撰写、镜头调度、氛围与声音设计",
+    tags: ["Veo", "AIGC视频", "赛博朋克", "提示词创作"],
+    src: "public/videos/aily-veo.mp4",
+    poster: "public/wallpapers/cyber-nerv-purple-green.jpg",
+    prompt:
+      "用VEO为我生成视频：\n" +
+      "电影级赛博朋克长镜头，极具《银翼杀手2049》忧郁质感。画面中大雨磅礴，一个神情落寞的男人面部特写，眼睛瞳孔是蓝色的，眼眶微红并滑落一滴晶莹的泪珠，他缓缓抬头仰望。" +
+      "镜头变换，人物在摩天大楼之前，向后拉远向上微移，人物抬头向上，展现出在摩天大楼霓虹广告中的巨大全息投影女性头像（AILY），她散发着迷幻的霓虹紫蓝光芒和轻微的数字扫描线故障效果。" +
+      "全息女人的嘴唇缓缓开合，伴随着空灵、温柔且带有微弱电子混响的女性AI嗓音深情念白：\"Hello, I am AILY. You look so lonely...\" " +
+      "整个场景的背景音效交织着沉闷的雷雨声、深沉的氛围合成器旋律（Ambient Synth）和遥远的城市低鸣，整体氛围极致孤独且宏大，8K超清画质，电影级调色，高对比度光影。"
+  },
+  {
+    id: "AV-02",
+    title: "月下竹林双刀对决",
+    task: "即梦文生视频 / 武侠动作分镜",
+    role: "提示词撰写、动作编排、金属音效与节奏设计",
+    tags: ["即梦", "AIGC视频", "武侠动作", "音效设计"],
+    src: "public/videos/bamboo-duel-jimeng.mp4",
+    poster: "public/videos/bamboo-duel-jimeng-poster.jpg",
+    prompt:
+      "暗夜竹林深处，月光透过竹叶洒下斑驳光影。两名黑衣剑客对峙，手持狭长钢刀，刀刃折射冷冽寒光。" +
+      "其中一人率先发动攻势，身体前倾急速突进，钢刀自右上斜劈而下，另一人横刀格挡，两刃猛烈撞击，音效：尖锐刺耳的金属碰撞声“锵——”，伴随火星四溅飞散。" +
+      "攻方借力旋转手腕，刀刃贴着对方刀背滑下，发出连续的金属摩擦声“吱啦——”，火星在夜色中拉出一道细长光线。" +
+      "守方后撤半步卸力，随即反手撩刀上挑，刀尖划破空气带起破空声“咻——”，对方侧身闪避，刀刃擦过衣襟斩断几根飘起的衣带。" +
+      "两人交错换位，脚下枯叶被急速步伐踏碎发出细碎脆响。" +
+      "连续快攻节奏加快，刀剑密集碰撞，音效：一连串“锵锵锵”短促激烈互击声，每一次撞击都有对应火花炸裂，刀刃在高强度碰撞下产生轻微震颤肉眼可见的金属抖动。" +
+      "最后双方同时蓄力重斩，两刀全力对碰于画面中央，刀身剧烈震荡发出沉闷悠长的金属嗡鸣“嗡——”，强大的冲击力震散周围落叶呈环形向外飞卷，画面做升格慢动作处理，定格在双刀交击点上，两刃接触处因高温微微泛红冒出一缕青烟，音效：嗡鸣渐弱后归于寂静，只剩远处几声竹叶沙沙响。"
+  }
+];
+
+const aigcTvEffectSrc = "public/effects/tv-closing.mp4";
+
 const iconGrid = document.querySelector("#iconGrid");
 const mainWindow = document.querySelector("#mainWindow");
 const popupLayer = document.querySelector("#popupLayer");
+let elevatedPopupLayer = null;
 const crtSwitch = document.querySelector("#crtSwitch");
 const bootScreen = document.querySelector("#bootScreen");
 const bootIntrusion = document.querySelector("#bootIntrusion");
@@ -269,7 +330,7 @@ const agentPrankCharacter = document.querySelector("#agentPrankCharacter");
 const agentPrankImage = agentPrankCharacter?.querySelector("img");
 const originalMainChildren = Array.from(mainWindow.children);
 const pressableSelector = "button, .desktop-icon, .link-list a";
-const clickSoundExcludedSelector = "#agentNext, #agentPrankCharacter, #agentEyeHotspot, .agent-dialog, .agent-prank";
+const clickSoundExcludedSelector = "#agentNext, #agentPrankCharacter, #agentEyeHotspot, .agent-dialog, .agent-prank, [data-silent-click]";
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const githubProjectUrl = "https://github.com/whateverboy2333/P_website";
 const githubLatestCommitApi = "https://api.github.com/repos/whateverboy2333/P_website/commits/main";
@@ -371,6 +432,7 @@ function pulseLoadingCursor(duration = 260) {
 
 function setPressing(element) {
   if (!element || element.disabled || element.classList.contains("disabled")) return;
+  if (element.closest("[data-silent-click]")) return;
   element.classList.add("is-pressing");
 }
 
@@ -1080,14 +1142,42 @@ function syncHiddenAgent() {
   }
 }
 
+function setWallpaperClass(wallpaperClass) {
+  document.body.classList.remove(...wallpaperClasses.filter(Boolean));
+
+  const nextIndex = wallpaperClasses.indexOf(wallpaperClass);
+  wallpaperIndex = nextIndex >= 0 ? nextIndex : 0;
+  const nextWallpaper = wallpaperClasses[wallpaperIndex];
+  if (nextWallpaper) document.body.classList.add(nextWallpaper);
+}
+
+function getCurrentWallpaperClass() {
+  return wallpaperClasses.find((wallpaperClass) => document.body.classList.contains(wallpaperClass))
+    || wallpaperClasses[wallpaperIndex]
+    || wallpaperClasses[0];
+}
+
+function applyInitialWallpaperFromParams() {
+  const requestedWallpaper = appParams.get("wallpaper");
+  if (wallpaperClasses.includes(requestedWallpaper)) {
+    setWallpaperClass(requestedWallpaper);
+  }
+}
+
 function changeWallpaper() {
   pulseLoadingCursor(180);
-  document.body.classList.remove(...wallpaperClasses.filter(Boolean));
-  wallpaperIndex = (wallpaperIndex + 1) % wallpaperClasses.length;
-  const nextWallpaper = wallpaperClasses[wallpaperIndex];
-  if (nextWallpaper) {
-    document.body.classList.add(nextWallpaper);
-  }
+  const nextIndex = (wallpaperIndex + 1) % wallpaperClasses.length;
+  setWallpaperClass(wallpaperClasses[nextIndex]);
+}
+
+function getIpDesignPageUrl() {
+  const params = new URLSearchParams();
+  params.set("wallpaper", getCurrentWallpaperClass());
+  return `ip-design.html?${params.toString()}`;
+}
+
+function openIpDesignPage() {
+  window.location.assign(getIpDesignPageUrl());
 }
 
 function setWindowCollapsed(windowElement, collapsed) {
@@ -1177,7 +1267,10 @@ function canStartScreensaver() {
   return Boolean(screensaver && screensaverStage)
     && !document.body.classList.contains("powered-off")
     && !document.body.classList.contains("boot-active")
-    && !document.body.classList.contains("boot-pending");
+    && !document.body.classList.contains("boot-pending")
+    && !document.body.classList.contains("aigc-tv-active")
+    && !document.body.classList.contains("reserved-game-active")
+    && !document.body.classList.contains("dont-click-virus-active");
 }
 
 function clearScreensaverTimer() {
@@ -1313,10 +1406,15 @@ function startScreensaver() {
 
 function stopScreensaver(options = {}) {
   if (!isScreensaverActive()) {
-    if (options.reschedule !== false) scheduleScreensaver();
+    if (options.reschedule === false) {
+      clearScreensaverTimer();
+    } else {
+      scheduleScreensaver();
+    }
     return;
   }
 
+  clearScreensaverTimer();
   window.clearInterval(screensaverInterval);
   screensaverItems.forEach((item) => window.clearTimeout(item.bumpTimer));
   screensaverItems = [];
@@ -1328,6 +1426,15 @@ function stopScreensaver(options = {}) {
 }
 
 function resetScreensaverFromActivity() {
+  if (
+    document.body.classList.contains("aigc-tv-active")
+    || document.body.classList.contains("reserved-game-active")
+    || document.body.classList.contains("dont-click-virus-active")
+  ) {
+    clearScreensaverTimer();
+    return;
+  }
+
   if (isScreensaverActive()) {
     stopScreensaver();
   } else {
@@ -1381,6 +1488,615 @@ function handleScreensaverPointerMove(event) {
   }
 }
 
+function getAigcTvChannel(index = aigcTvCurrentIndex) {
+  return aigcChannels[((index % aigcChannels.length) + aigcChannels.length) % aigcChannels.length];
+}
+
+function setAigcTvPromptOpen(open) {
+  aigcTvPromptOpen = open;
+  if (!aigcTvOverlay) return;
+
+  const promptPanel = aigcTvOverlay.querySelector("[data-aigc-prompt-panel]");
+  const promptButton = aigcTvOverlay.querySelector("[data-aigc-prompt]");
+  aigcTvOverlay.classList.toggle("is-prompt-open", aigcTvPromptOpen);
+  promptPanel?.toggleAttribute("hidden", !aigcTvPromptOpen);
+  promptButton?.setAttribute("aria-expanded", String(aigcTvPromptOpen));
+}
+
+function renderAigcTvChannel() {
+  if (!aigcTvOverlay) return;
+
+  const channel = getAigcTvChannel();
+  aigcTvOverlay.querySelector("[data-aigc-channel-id]").textContent = channel.id;
+  aigcTvOverlay.querySelector("[data-aigc-title]").textContent = channel.title;
+  aigcTvOverlay.querySelector("[data-aigc-task]").textContent = channel.task;
+  aigcTvOverlay.querySelector("[data-aigc-role]").textContent = channel.role;
+  aigcTvOverlay.querySelector("[data-aigc-tags]").textContent = channel.tags.join(" / ");
+  aigcTvOverlay.querySelector("[data-aigc-prompt-title]").textContent = `${channel.id} PROMPT`;
+  aigcTvOverlay.querySelector("[data-aigc-prompt-text]").textContent = channel.prompt;
+
+  const poster = aigcTvOverlay.querySelector("[data-aigc-poster]");
+  const video = aigcTvOverlay.querySelector("[data-aigc-video]");
+  poster.toggleAttribute("hidden", Boolean(channel.src));
+  if (channel.src) {
+    poster.removeAttribute("src");
+    poster.alt = "";
+  } else {
+    poster.src = channel.poster;
+    poster.alt = `${channel.title} preview frame`;
+  }
+
+  if (video) {
+    video.pause();
+    video.toggleAttribute("hidden", !channel.src);
+    video.removeAttribute("src");
+    video.removeAttribute("controls");
+    video.poster = channel.poster;
+    video.muted = false;
+    video.currentTime = 0;
+    updateAigcTvSoundButton();
+
+    if (channel.src) {
+      video.src = channel.src;
+      video.load();
+      video.volume = 0.9;
+      video.play().catch(() => {
+        video.setAttribute("controls", "");
+      });
+    }
+  }
+
+  setAigcTvPromptOpen(aigcTvPromptOpen);
+}
+
+function updateAigcTvSoundButton() {
+  const video = aigcTvOverlay?.querySelector("[data-aigc-video]");
+  const soundButton = aigcTvOverlay?.querySelector("[data-aigc-sound]");
+  if (!video || !soundButton) return;
+
+  const muted = video.muted || video.volume === 0;
+  soundButton.classList.toggle("is-muted", muted);
+  soundButton.setAttribute("aria-pressed", String(!muted));
+  soundButton.setAttribute("aria-label", muted ? "开启声音" : "静音");
+  soundButton.setAttribute("title", muted ? "开启声音" : "静音");
+}
+
+function finishAigcTvEffect(callback) {
+  if (!aigcTvOverlay) return;
+
+  const effect = aigcTvOverlay.querySelector("[data-aigc-effect]");
+  window.clearTimeout(aigcTvSwitchTimer);
+  if (effect) {
+    effect.pause();
+    effect.onended = null;
+    effect.removeAttribute("data-closing");
+    effect.removeAttribute("src");
+    effect.load();
+  }
+  aigcTvOverlay.classList.remove("is-switching", "is-closing");
+  if (callback) callback();
+}
+
+function playAigcTvEffect({ closing = false, callback } = {}) {
+  if (!aigcTvOverlay || reducedMotionQuery.matches) {
+    if (callback) callback();
+    return;
+  }
+
+  const effect = aigcTvOverlay.querySelector("[data-aigc-effect]");
+  if (!effect) {
+    if (callback) callback();
+    return;
+  }
+
+  window.clearTimeout(aigcTvSwitchTimer);
+  aigcTvOverlay.classList.toggle("is-switching", !closing);
+  aigcTvOverlay.classList.toggle("is-closing", closing);
+  if (closing) effect.dataset.closing = "true";
+
+  const fallbackMs = closing ? 3400 : 900;
+  const finish = () => finishAigcTvEffect(callback);
+  effect.onended = closing ? finish : null;
+  if (!effect.currentSrc) {
+    effect.src = aigcTvEffectSrc;
+    effect.load();
+  }
+
+  try {
+    effect.currentTime = 0;
+  } catch {}
+  effect.play().catch(() => {});
+  aigcTvSwitchTimer = window.setTimeout(finish, fallbackMs);
+}
+
+function pauseAigcTvMainVideo() {
+  const video = aigcTvOverlay?.querySelector("[data-aigc-video]");
+  video?.pause();
+}
+
+function switchAigcTvChannel(direction = 1) {
+  if (!aigcTvOverlay || aigcTvOverlay.classList.contains("is-switching") || aigcTvOverlay.classList.contains("is-closing")) {
+    return;
+  }
+
+  const nextIndex = ((aigcTvCurrentIndex + direction) % aigcChannels.length + aigcChannels.length) % aigcChannels.length;
+  pauseAigcTvMainVideo();
+  setAigcTvPromptOpen(false);
+  playAigcTvEffect({
+    callback: () => {
+      aigcTvCurrentIndex = nextIndex;
+      renderAigcTvChannel();
+    }
+  });
+}
+
+function closeAigcTv() {
+  if (!aigcTvOverlay || aigcTvOverlay.classList.contains("is-closing")) return;
+
+  pauseAigcTvMainVideo();
+  setAigcTvPromptOpen(false);
+  playAigcTvEffect({
+    closing: true,
+    callback: () => {
+      window.clearTimeout(aigcTvSwitchTimer);
+      aigcTvOverlay?.remove();
+      aigcTvOverlay = null;
+      document.body.classList.remove("aigc-tv-active");
+      scheduleScreensaver();
+    }
+  });
+}
+
+function openAigcTv() {
+  if (aigcTvOverlay) {
+    aigcTvOverlay.querySelector("[data-aigc-prompt]")?.focus({ preventScroll: true });
+    return;
+  }
+
+  clearScreensaverTimer();
+  stopScreensaver({ reschedule: false });
+  document.body.classList.add("aigc-tv-active");
+  aigcTvOverlay = document.createElement("section");
+  aigcTvOverlay.className = "aigc-tv-overlay";
+  aigcTvOverlay.setAttribute("role", "dialog");
+  aigcTvOverlay.setAttribute("aria-modal", "true");
+  aigcTvOverlay.setAttribute("aria-label", "AIGC TV player");
+  aigcTvOverlay.innerHTML = `
+    <div class="aigc-tv-media" aria-hidden="true">
+      <img data-aigc-poster src="" alt="">
+      <video data-aigc-video autoplay playsinline loop preload="auto" hidden></video>
+      <video data-aigc-effect muted playsinline preload="none"></video>
+    </div>
+    <div class="aigc-tv-scan" aria-hidden="true"></div>
+    <div class="aigc-tv-channel">
+      <span data-aigc-channel-id></span>
+      <span>AIGC 作品</span>
+    </div>
+    <button type="button" class="aigc-tv-sound-button" data-aigc-sound aria-pressed="true" aria-label="静音" title="静音">
+      <span class="aigc-tv-speaker-icon" aria-hidden="true">
+        <span class="aigc-tv-speaker-body"></span>
+        <span class="aigc-tv-speaker-wave aigc-tv-speaker-wave-one"></span>
+        <span class="aigc-tv-speaker-wave aigc-tv-speaker-wave-two"></span>
+        <span class="aigc-tv-speaker-slash"></span>
+      </span>
+    </button>
+    <div class="aigc-tv-meta">
+      <p class="aigc-tv-kicker">信号已锁定</p>
+      <h2 data-aigc-title></h2>
+      <p><span>生成任务：</span> <strong data-aigc-task></strong></p>
+      <p><span>我的工作：</span> <strong data-aigc-role></strong></p>
+      <p><span>标签：</span> <strong data-aigc-tags></strong></p>
+    </div>
+    <div class="aigc-tv-actions">
+      <button type="button" data-aigc-prompt aria-expanded="false">PROMPT</button>
+      <button type="button" data-aigc-power aria-label="Exit AIGC TV">POWER</button>
+    </div>
+    <aside class="aigc-tv-prompt-panel" data-aigc-prompt-panel hidden>
+      <div class="aigc-tv-prompt-head">
+        <h2 data-aigc-prompt-title></h2>
+        <button type="button" data-aigc-prompt-close aria-label="Close prompt">CLOSE</button>
+      </div>
+      <p data-aigc-prompt-text></p>
+    </aside>`;
+  document.body.appendChild(aigcTvOverlay);
+  renderAigcTvChannel();
+
+  aigcTvOverlay.addEventListener("click", (event) => {
+    if (event.target.closest("[data-aigc-prompt]")) {
+      setAigcTvPromptOpen(!aigcTvPromptOpen);
+      return;
+    }
+
+    if (event.target.closest("[data-aigc-prompt-close]")) {
+      setAigcTvPromptOpen(false);
+      return;
+    }
+
+    if (event.target.closest("[data-aigc-sound]")) {
+      const video = aigcTvOverlay.querySelector("[data-aigc-video]");
+      if (video) {
+        video.muted = !video.muted;
+        video.play().catch(() => {
+          video.setAttribute("controls", "");
+        });
+        updateAigcTvSoundButton();
+      }
+      return;
+    }
+
+    if (event.target.closest("[data-aigc-power]")) {
+      closeAigcTv();
+      return;
+    }
+
+    if (!event.target.closest("[data-aigc-prompt-panel]")) {
+      switchAigcTvChannel(1);
+    }
+  });
+
+  aigcTvOverlay.querySelector("[data-aigc-prompt]")?.focus({ preventScroll: true });
+}
+
+function closeReservedGameExperience(options = {}) {
+  window.clearTimeout(reservedGameTimer);
+  reservedGameTimer = 0;
+  cleanupAbyssEyeGame();
+  reservedGameOverlay?.remove();
+  reservedGameOverlay = null;
+  document.body.classList.remove("reserved-game-active");
+
+  if (options.reschedule !== false) scheduleScreensaver();
+}
+
+function clearDontClickVirusLayer() {
+  window.clearInterval(dontClickVirusInterval);
+  dontClickVirusInterval = 0;
+  dontClickVirusCount = 0;
+  dontClickVirusLayer?.remove();
+  dontClickVirusLayer = null;
+  document.body.classList.remove("dont-click-virus-active");
+}
+
+function cleanupAbyssEyeGame() {
+  if (!abyssGameState) return;
+
+  if (abyssGameState.frame) {
+    window.cancelAnimationFrame(abyssGameState.frame);
+  }
+
+  abyssGameState = null;
+}
+
+function formatAbyssTime(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function createAbyssEyeButton(index, stageRect) {
+  const button = document.createElement("button");
+  const basePoints = [
+    [12, 20], [28, 16], [48, 19], [70, 15], [86, 23],
+    [18, 42], [37, 38], [61, 40], [79, 45], [10, 68],
+    [29, 72], [47, 61], [66, 70], [86, 66], [55, 83]
+  ];
+  const [baseX, baseY] = basePoints[index % basePoints.length];
+  const stageWidth = Math.max(stageRect.width, 320);
+  const stageHeight = Math.max(stageRect.height, 360);
+  const size = Math.round(clamp(stageWidth * (0.065 + Math.random() * 0.035), 54, 112));
+  const jitterX = (Math.random() - 0.5) * stageWidth * 0.08;
+  const jitterY = (Math.random() - 0.5) * stageHeight * 0.08;
+  const left = clamp(Math.round(stageWidth * baseX / 100 - size / 2 + jitterX), 12, stageWidth - size - 12);
+  const top = clamp(Math.round(stageHeight * baseY / 100 - size / 2 + jitterY), 12, stageHeight - size - 12);
+  const delay = Math.round(Math.random() * -1600);
+  const drift = Math.round((Math.random() - 0.5) * 14);
+
+  button.type = "button";
+  button.className = "abyss-eye";
+  button.dataset.abyssEye = String(index + 1);
+  button.setAttribute("aria-label", `Clear eye ${index + 1}`);
+  button.style.left = `${left}px`;
+  button.style.top = `${top}px`;
+  button.style.width = `${size}px`;
+  button.style.setProperty("--eye-drift", `${drift}px`);
+  button.style.setProperty("--eye-delay", `${delay}ms`);
+  button.innerHTML = `<img src="${abyssGameAssets.eye}" alt="">`;
+
+  return button;
+}
+
+function updateAbyssHud() {
+  if (!abyssGameState) return;
+
+  const remainingMs = Math.max(0, abyssGameConfig.durationMs - abyssGameState.elapsedMs);
+  const progress = clamp(abyssGameState.elapsedMs / abyssGameConfig.durationMs, 0, 1);
+  abyssGameState.timerNode.textContent = formatAbyssTime(remainingMs);
+  abyssGameState.clearedNode.textContent = `${abyssGameState.cleared}/${abyssGameState.total}`;
+  abyssGameState.threatNode.textContent = `${String(Math.round(progress * 100)).padStart(2, "0")}%`;
+}
+
+function finishAbyssGame(outcome) {
+  if (!abyssGameState || abyssGameState.status !== "playing") return;
+
+  const state = abyssGameState;
+  state.status = outcome;
+  if (state.frame) {
+    window.cancelAnimationFrame(state.frame);
+    state.frame = 0;
+  }
+
+  state.stage.classList.add(outcome === "win" ? "is-win" : "is-lose");
+  state.eyeLayer.querySelectorAll("[data-abyss-eye]").forEach((eye) => {
+    eye.disabled = true;
+  });
+
+  const won = outcome === "win";
+  const elapsedSeconds = Math.max(1, Math.round(state.elapsedMs / 1000));
+  state.resultNode.hidden = false;
+  state.resultNode.innerHTML = `
+    <section class="abyss-report-card" aria-live="polite">
+      <div class="abyss-reporter-crop" aria-hidden="true">
+        <img src="${abyssGameAssets.reporter}" alt="">
+      </div>
+      <div class="abyss-report-copy">
+        <p class="abyss-report-kicker">${won ? "\u6c47\u62a5\u5b8c\u6210" : "\u6df1\u6e0a\u541e\u566c"}</p>
+        <h2>${won ? "\u6240\u6709\u773c\u775b\u5df2\u6e05\u9664" : "\u4f60\u88ab\u6df1\u6e0a\u6293\u4f4f\u4e86"}</h2>
+        <p>${won ? "\u76ee\u6807 15/15\uff0c\u6570\u636e\u957f\u6cb3\u6682\u65f6\u6062\u590d\u7a33\u5b9a\u3002\u5c0f\u89d2\u8272\u56de\u62a5\uff1a\u8fd9\u4e2a\u7f51\u7ad9\u786e\u5b9e\u8fd8\u80fd\u518d\u85cf\u70b9\u4e1c\u897f\u3002" : "\u773c\u775b\u8fd8\u6ca1\u6709\u5168\u90e8\u6253\u6389\uff0c\u6df1\u6e0a\u5de8\u53e3\u5df2\u7ecf\u5f20\u5f00\u5230\u6781\u9650\u3002"}</p>
+        <p class="abyss-report-stat">EYES ${state.cleared}/${state.total} / TIME ${elapsedSeconds}s</p>
+        <div class="abyss-report-actions">
+          ${won ? "" : `<button type="button" data-abyss-game-retry>\u518d\u6765\u4e00\u6b21</button>`}
+          <button type="button" data-abyss-game-return>\u8fd4\u56de\u4e3b\u754c\u9762</button>
+        </div>
+      </div>
+    </section>`;
+
+  const focusTarget = state.resultNode.querySelector("[data-abyss-game-return], [data-abyss-game-retry]");
+  focusTarget?.focus({ preventScroll: true });
+}
+
+function tickAbyssGame(timestamp) {
+  if (!abyssGameState || abyssGameState.status !== "playing") return;
+
+  const state = abyssGameState;
+  if (!state.startedAt) state.startedAt = timestamp;
+  state.elapsedMs = timestamp - state.startedAt;
+  const progress = clamp(state.elapsedMs / abyssGameConfig.durationMs, 0, 1);
+  const easedProgress = Math.pow(progress, 1.18);
+  const mouthScale = abyssGameConfig.mouthStartScale
+    + (abyssGameConfig.mouthEndScale - abyssGameConfig.mouthStartScale) * easedProgress;
+
+  state.mouthNode.style.setProperty("--mouth-scale", mouthScale.toFixed(3));
+  state.mouthNode.style.setProperty("--mouth-alpha", (0.94 + progress * 0.06).toFixed(3));
+  state.mouthNode.style.setProperty("--mouth-rise", `${Math.round((1 - progress) * 16)}px`);
+  updateAbyssHud();
+
+  if (progress >= 1) {
+    finishAbyssGame("lose");
+    return;
+  }
+
+  state.frame = window.requestAnimationFrame(tickAbyssGame);
+}
+
+function initializeAbyssEyeGame() {
+  if (!reservedGameOverlay) return;
+
+  cleanupAbyssEyeGame();
+  const stage = reservedGameOverlay.querySelector("[data-abyss-stage]");
+  const eyeLayer = reservedGameOverlay.querySelector("[data-abyss-eye-layer]");
+  const mouthNode = reservedGameOverlay.querySelector("[data-abyss-mouth]");
+  const timerNode = reservedGameOverlay.querySelector("[data-abyss-timer]");
+  const clearedNode = reservedGameOverlay.querySelector("[data-abyss-cleared]");
+  const threatNode = reservedGameOverlay.querySelector("[data-abyss-threat]");
+  const resultNode = reservedGameOverlay.querySelector("[data-abyss-result]");
+  if (!stage || !eyeLayer || !mouthNode || !timerNode || !clearedNode || !threatNode || !resultNode) return;
+
+  const stageRect = stage.getBoundingClientRect();
+  const eyeButtons = Array.from({ length: abyssGameConfig.eyeCount }, (_, index) => (
+    createAbyssEyeButton(index, stageRect)
+  ));
+  eyeLayer.append(...eyeButtons);
+
+  abyssGameState = {
+    status: "playing",
+    total: abyssGameConfig.eyeCount,
+    cleared: 0,
+    elapsedMs: 0,
+    startedAt: 0,
+    frame: 0,
+    stage,
+    eyeLayer,
+    mouthNode,
+    timerNode,
+    clearedNode,
+    threatNode,
+    resultNode
+  };
+
+  updateAbyssHud();
+  eyeLayer.addEventListener("click", (event) => {
+    const eyeButton = event.target.closest("[data-abyss-eye]");
+    if (!eyeButton || !eyeLayer.contains(eyeButton) || !abyssGameState || abyssGameState.status !== "playing") return;
+
+    eyeButton.classList.add("is-cleared");
+    eyeButton.disabled = true;
+    abyssGameState.cleared += 1;
+    updateAbyssHud();
+    window.setTimeout(() => eyeButton.remove(), 240);
+
+    if (abyssGameState.cleared >= abyssGameState.total) {
+      finishAbyssGame("win");
+    }
+  });
+
+  abyssGameState.frame = window.requestAnimationFrame(tickAbyssGame);
+}
+
+function createDontClickVirusButton(index, sourcePopup) {
+  const button = document.createElement("button");
+  const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth);
+  const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+  const columns = viewportWidth <= 700 ? 4 : 9;
+  const rows = viewportWidth <= 700 ? 7 : 8;
+  const slot = index % (columns * rows);
+  const col = slot % columns;
+  const row = Math.floor(slot / columns);
+  const largeChance = Math.random() < 0.18;
+  const scale = largeChance
+    ? 2.1 + Math.random() * 1.35
+    : 0.82 + Math.random() * 1.65;
+  const width = Math.round(84 * scale + Math.random() * 36);
+  const height = Math.round(36 * scale + Math.random() * 18);
+  const fontSize = Math.round(14 * scale);
+  const cellCenterX = (col + Math.random() * 0.9 + 0.05) * (viewportWidth / columns);
+  const cellCenterY = (row + Math.random() * 0.9 + 0.05) * (viewportHeight / rows);
+  const randomCenterX = Math.random() * viewportWidth;
+  const randomCenterY = Math.random() * viewportHeight;
+  const usePureRandom = Math.random() < 0.45;
+  const centerX = usePureRandom ? randomCenterX : cellCenterX;
+  const centerY = usePureRandom ? randomCenterY : cellCenterY;
+  const overflowX = Math.min(width * 0.32, 90);
+  const overflowY = Math.min(height * 0.32, 70);
+  const left = clamp(
+    Math.round(centerX - width / 2 + (Math.random() - 0.5) * width * 0.72),
+    -overflowX,
+    viewportWidth - width + overflowX
+  );
+  const top = clamp(
+    Math.round(centerY - height / 2 + (Math.random() - 0.5) * height * 0.72),
+    -overflowY,
+    viewportHeight - height + overflowY
+  );
+  const rotate = Math.round((Math.random() - 0.5) * 24);
+
+  button.type = "button";
+  button.className = "dont-click-choice dont-click-virus-button";
+  button.textContent = "好玩";
+  button.style.left = `${left}px`;
+  button.style.top = `${top}px`;
+  button.style.width = `${width}px`;
+  button.style.minHeight = `${height}px`;
+  button.style.fontSize = `${fontSize}px`;
+  button.style.padding = `${Math.max(6, Math.round(7 * scale))}px ${Math.max(12, Math.round(15 * scale))}px`;
+  button.style.zIndex = String(index + 1);
+  button.style.setProperty("--virus-rotate", `${rotate}deg`);
+  button.addEventListener("click", () => {
+    openReservedGameExperience(sourcePopup);
+  });
+
+  return button;
+}
+
+function openDontClickVirusLayer(sourcePopup) {
+  if (dontClickVirusLayer) return;
+
+  const maxButtons = window.innerWidth <= 700 ? 360 : 620;
+  const baseBatchSize = window.innerWidth <= 700 ? 5 : 8;
+  const batchDelay = 115;
+  clearScreensaverTimer();
+  stopScreensaver({ reschedule: false });
+  document.body.classList.add("dont-click-virus-active");
+  dontClickVirusLayer = document.createElement("div");
+  dontClickVirusLayer.className = "dont-click-virus-layer";
+  dontClickVirusLayer.setAttribute("role", "dialog");
+  dontClickVirusLayer.setAttribute("aria-label", "好玩按钮正在扩散");
+  document.body.appendChild(dontClickVirusLayer);
+
+  function appendVirusBatch() {
+    if (!dontClickVirusLayer) return;
+    if (dontClickVirusCount >= maxButtons) {
+      window.clearInterval(dontClickVirusInterval);
+      dontClickVirusInterval = 0;
+      return;
+    }
+
+    const growth = Math.min(10, Math.floor(dontClickVirusCount / 70));
+    const batchSize = Math.min(baseBatchSize + growth, maxButtons - dontClickVirusCount);
+    const buttons = Array.from({ length: batchSize }, () => {
+      const button = createDontClickVirusButton(dontClickVirusCount, sourcePopup);
+      dontClickVirusCount += 1;
+      return button;
+    });
+    dontClickVirusLayer.append(...buttons);
+  }
+
+  appendVirusBatch();
+  dontClickVirusInterval = window.setInterval(appendVirusBatch, batchDelay);
+}
+
+function renderReservedGameInterface() {
+  if (!reservedGameOverlay) return;
+
+  cleanupAbyssEyeGame();
+  reservedGameOverlay.classList.remove("is-intro");
+  reservedGameOverlay.classList.add("is-ready");
+  reservedGameOverlay.innerHTML = `
+    <div class="reserved-game-shell is-abyss-game">
+      <header class="reserved-game-hud">
+        <span>ABYSS EYE HUNT</span>
+        <strong>EYES <span data-abyss-cleared>0/15</span></strong>
+        <span>TIME <span data-abyss-timer>0:42</span></span>
+        <span>ABYSS <span data-abyss-threat>00%</span></span>
+        <button type="button" data-reserved-game-close aria-label="Exit reserved game">EXIT</button>
+      </header>
+      <main class="reserved-game-stage abyss-game-stage">
+        <section class="abyss-game-arena" data-abyss-stage aria-label="Abyss eye hunt game">
+          <img class="abyss-background" src="${abyssGameAssets.background}" alt="" draggable="false">
+          <img class="abyss-river" src="${abyssGameAssets.river}" alt="" draggable="false">
+          <div class="abyss-game-vignette" aria-hidden="true"></div>
+          <img class="abyss-mouth" data-abyss-mouth src="${abyssGameAssets.mouth}" alt="" draggable="false">
+          <div class="abyss-eye-layer" data-abyss-eye-layer></div>
+          <div class="abyss-game-result" data-abyss-result hidden></div>
+        </section>
+        <section class="reserved-game-arena" aria-label="Reserved game interface">
+          <div class="reserved-game-core" aria-hidden="true"></div>
+          <p class="reserved-game-title">游戏界面预留中</p>
+          <p class="reserved-game-tag">NEXT BUILD</p>
+        </section>
+      </main>
+      <footer class="reserved-game-footer">PLAYER: GUEST_01 / OBJECTIVE: CLEAR 15 GREEN EYES BEFORE THE ABYSS OPENS</footer>
+    </div>`;
+  reservedGameOverlay.querySelector("[data-reserved-game-close]")?.focus({ preventScroll: true });
+  initializeAbyssEyeGame();
+}
+
+function openReservedGameExperience(sourcePopup) {
+  sourcePopup?.remove();
+  clearDontClickVirusLayer();
+  closeReservedGameExperience({ reschedule: false });
+  clearScreensaverTimer();
+  stopScreensaver({ reschedule: false });
+  document.body.classList.add("reserved-game-active");
+
+  reservedGameOverlay = document.createElement("section");
+  reservedGameOverlay.className = "reserved-game-overlay is-intro";
+  reservedGameOverlay.setAttribute("role", "dialog");
+  reservedGameOverlay.setAttribute("aria-modal", "true");
+  reservedGameOverlay.setAttribute("aria-label", "Abyss eye hunt game");
+  reservedGameOverlay.innerHTML = `<p class="reserved-game-intro">给你看个更好玩的</p>`;
+  reservedGameOverlay.innerHTML = `<p class="reserved-game-intro">\u7ed9\u4f60\u770b\u4e2a\u66f4\u597d\u73a9\u7684</p>`;
+  document.body.appendChild(reservedGameOverlay);
+
+  reservedGameOverlay.addEventListener("click", (event) => {
+    if (event.target.closest("[data-abyss-game-return]")) {
+      closeReservedGameExperience();
+      return;
+    }
+
+    if (event.target.closest("[data-abyss-game-retry]")) {
+      renderReservedGameInterface();
+      return;
+    }
+
+    if (event.target.closest("[data-reserved-game-close]")) {
+      closeReservedGameExperience();
+    }
+  });
+
+  reservedGameTimer = window.setTimeout(renderReservedGameInterface, 1500);
+}
+
 function createIcon(item) {
   const element = item.href ? document.createElement("a") : document.createElement("button");
   element.className = `desktop-icon${item.disabled ? " disabled" : ""}`;
@@ -1425,6 +2141,38 @@ window.addEventListener("focus", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (reservedGameOverlay && event.key === "Escape") {
+    event.preventDefault();
+    closeReservedGameExperience();
+    return;
+  }
+
+  if (aigcTvOverlay) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeAigcTv();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      switchAigcTvChannel(1);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      switchAigcTvChannel(-1);
+      return;
+    }
+
+    if (event.key.toLowerCase() === "p") {
+      event.preventDefault();
+      setAigcTvPromptOpen(!aigcTvPromptOpen);
+      return;
+    }
+  }
+
   if (event.key !== "Enter" && event.key !== " ") return;
   setPressing(event.target.closest(pressableSelector));
 });
@@ -1495,7 +2243,13 @@ document.addEventListener("click", (event) => {
 
   const opener = event.target.closest("[data-window]");
   if (opener) {
-    openWindow(opener.dataset.window);
+    if (opener.dataset.window === "ipDesign") {
+      openIpDesignPage();
+    } else if (opener.dataset.window === "aigcTv") {
+      openAigcTv();
+    } else {
+      openWindow(opener.dataset.window);
+    }
     return;
   }
 
@@ -1524,13 +2278,23 @@ function renderDontClickStep(popup, stepId = dontClickSteps[0].id) {
   if (!message || !actions) return;
 
   root.dataset.currentStep = step.id;
+  if (step.id === "site-fun-check") {
+    root.dataset.unfunAttempts = "0";
+  } else {
+    delete root.dataset.unfunAttempts;
+  }
   root.classList.toggle("is-terminal", step.buttons.length === 0);
   message.textContent = step.text;
   actions.replaceChildren(...step.buttons.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dont-click-choice";
-    button.dataset.dontClickNext = item.next;
+    if (item.next) button.dataset.dontClickNext = item.next;
+    if (item.action) button.dataset.dontClickAction = item.action;
+    if (item.action === "avoid-unfun") {
+      button.classList.add("is-unfun-button");
+      button.dataset.silentClick = "true";
+    }
     button.textContent = item.label;
     return button;
   }));
@@ -1540,6 +2304,53 @@ function renderDontClickStep(popup, stepId = dontClickSteps[0].id) {
   popup.classList.add("is-flow-shifting");
 }
 
+function positionUnfunButtonInsideWindow(root, button, attempt) {
+  const rootRect = root.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  const safePad = 14;
+  const maxX = Math.max(safePad, root.clientWidth - button.offsetWidth - safePad);
+  const maxY = Math.max(safePad, root.clientHeight - button.offsetHeight - safePad);
+  const startX = clamp(buttonRect.left - rootRect.left, safePad, maxX);
+  const startY = clamp(buttonRect.top - rootRect.top, safePad, maxY);
+  const targets = [
+    {
+      x: root.clientWidth - button.offsetWidth - safePad,
+      y: Math.round(root.clientHeight * 0.42),
+      rotate: -4
+    },
+    {
+      x: safePad,
+      y: root.clientHeight - button.offsetHeight - safePad,
+      rotate: 5
+    }
+  ];
+  const target = targets[attempt - 1] || targets[targets.length - 1];
+
+  button.classList.add("is-unfun-evading");
+  button.style.left = `${startX}px`;
+  button.style.top = `${startY}px`;
+  button.style.setProperty("--evade-rotate", "0deg");
+  void button.offsetWidth;
+  button.style.left = `${clamp(target.x, safePad, maxX)}px`;
+  button.style.top = `${clamp(target.y, safePad, maxY)}px`;
+  button.style.setProperty("--evade-rotate", `${target.rotate}deg`);
+}
+
+function handleUnfunAttempt(popup, button) {
+  const root = popup?.querySelector("[data-dont-click-flow]");
+  if (!root) return;
+
+  const attempt = Number.parseInt(root.dataset.unfunAttempts || "0", 10) + 1;
+  root.dataset.unfunAttempts = String(attempt);
+
+  if (attempt <= 2) {
+    positionUnfunButtonInsideWindow(root, button, attempt);
+    return;
+  }
+
+  openDontClickVirusLayer(popup);
+}
+
 function initializeDontClickFlow(popup) {
   const root = popup?.querySelector("[data-dont-click-flow]");
   if (!root || root.dataset.flowReady === "true") return;
@@ -1547,17 +2358,31 @@ function initializeDontClickFlow(popup) {
   root.dataset.flowReady = "true";
   renderDontClickStep(popup);
   root.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-dont-click-next]");
+    const button = event.target.closest("[data-dont-click-next], [data-dont-click-action]");
     if (!button || !root.contains(button)) return;
 
     event.stopPropagation();
+    if (button.dataset.dontClickAction === "open-game-preview") {
+      openReservedGameExperience(popup);
+      return;
+    }
+
+    if (button.dataset.dontClickAction === "avoid-unfun") {
+      handleUnfunAttempt(popup, button);
+      return;
+    }
+
     renderDontClickStep(popup, button.dataset.dontClickNext);
   });
 }
 
+function setDontClickTilt(popup, tiltX = 0, tiltY = 0) {
+  popup.style.setProperty("--tilt-x", `${tiltX.toFixed(3)}deg`);
+  popup.style.setProperty("--tilt-y", `${tiltY.toFixed(3)}deg`);
+}
+
 function resetDontClickTilt(popup) {
-  popup.style.setProperty("--tilt-x", "0deg");
-  popup.style.setProperty("--tilt-y", "0deg");
+  setDontClickTilt(popup, 0, 0);
 }
 
 function initializeDontClickWindow(popup) {
@@ -1566,6 +2391,49 @@ function initializeDontClickWindow(popup) {
   initializeDontClickFlow(popup);
   popup.dataset.tiltReady = "true";
   resetDontClickTilt(popup);
+
+  const tiltState = {
+    active: false,
+    frame: 0,
+    currentX: 0,
+    currentY: 0,
+    targetX: 0,
+    targetY: 0
+  };
+  const tiltMaxX = 5.8;
+  const tiltMaxY = 7.2;
+  const tiltEase = 0.18;
+  const tiltSnap = 0.012;
+
+  function scheduleTiltFrame() {
+    if (!tiltState.frame) {
+      tiltState.frame = window.requestAnimationFrame(animateTilt);
+    }
+  }
+
+  function animateTilt() {
+    tiltState.frame = 0;
+    if (!popup.isConnected) return;
+
+    tiltState.currentX += (tiltState.targetX - tiltState.currentX) * tiltEase;
+    tiltState.currentY += (tiltState.targetY - tiltState.currentY) * tiltEase;
+
+    const deltaX = Math.abs(tiltState.targetX - tiltState.currentX);
+    const deltaY = Math.abs(tiltState.targetY - tiltState.currentY);
+    if (deltaX < tiltSnap) tiltState.currentX = tiltState.targetX;
+    if (deltaY < tiltSnap) tiltState.currentY = tiltState.targetY;
+
+    setDontClickTilt(popup, tiltState.currentX, tiltState.currentY);
+
+    if (Math.abs(tiltState.targetX - tiltState.currentX) > tiltSnap || Math.abs(tiltState.targetY - tiltState.currentY) > tiltSnap) {
+      scheduleTiltFrame();
+      return;
+    }
+
+    if (!tiltState.active && tiltState.targetX === 0 && tiltState.targetY === 0) {
+      popup.classList.remove("is-tilting");
+    }
+  }
 
   function updateTilt(event) {
     if (reducedMotionQuery.matches) return;
@@ -1576,21 +2444,23 @@ function initializeDontClickWindow(popup) {
     const normalizedX = clamp((event.clientX - rect.left - rect.width / 2) / (rect.width / 2), -1, 1);
     const normalizedY = clamp((event.clientY - rect.top - rect.height / 2) / (rect.height / 2), -1, 1);
 
+    tiltState.active = true;
+    tiltState.targetX = normalizedY * tiltMaxX;
+    tiltState.targetY = -normalizedX * tiltMaxY;
     popup.classList.add("is-tilting");
-    popup.style.setProperty("--tilt-x", `${(normalizedY * 8).toFixed(2)}deg`);
-    popup.style.setProperty("--tilt-y", `${(-normalizedX * 10).toFixed(2)}deg`);
+    scheduleTiltFrame();
   }
 
   function clearTilt() {
-    popup.classList.remove("is-tilting");
-    resetDontClickTilt(popup);
+    tiltState.active = false;
+    tiltState.targetX = 0;
+    tiltState.targetY = 0;
+    scheduleTiltFrame();
   }
 
-  popup.addEventListener("pointermove", updateTilt);
-  popup.addEventListener("mousemove", updateTilt);
+  popup.addEventListener("pointermove", updateTilt, { passive: true });
   popup.addEventListener("pointerleave", clearTilt);
   popup.addEventListener("pointercancel", clearTilt);
-  popup.addEventListener("mouseleave", clearTilt);
 
   const closeZone = popup.querySelector(".titlebar-close-only .titlebar-actions");
   closeZone?.addEventListener("pointerdown", (event) => {
@@ -1606,7 +2476,24 @@ function initializeDontClickWindow(popup) {
   });
 }
 
+function getPopupMount(name) {
+  if (name !== "dontClick") return popupLayer;
+
+  if (!elevatedPopupLayer) {
+    elevatedPopupLayer = document.createElement("div");
+    elevatedPopupLayer.className = "popup-layer popup-layer-elevated";
+    document.body.appendChild(elevatedPopupLayer);
+  }
+
+  return elevatedPopupLayer;
+}
+
 function openWindow(name) {
+  if (name === "aigcTv") {
+    openAigcTv();
+    return;
+  }
+
   const config = windows[name];
   if (!config) return;
 
@@ -1638,7 +2525,7 @@ function openWindow(name) {
       ${titlebarControls}
     </header>
     <div class="window-body ${config.className || ""}">${config.body}</div>`;
-  popupLayer.appendChild(popup);
+  getPopupMount(name).appendChild(popup);
   if (name === "guest") initializeGuestbook(popup);
   if (name === "dontClick") initializeDontClickWindow(popup);
   makeDraggable(popup);
@@ -1705,6 +2592,7 @@ syncStaticTitlebarGlyphs();
 syncInvertSwitch();
 syncAgentScale();
 syncGithubProjectStatus();
+applyInitialWallpaperFromParams();
 const bootVisible = initializeBootSequence();
 if (screensaverPreviewMode) {
   window.setTimeout(startScreensaver, 300);
