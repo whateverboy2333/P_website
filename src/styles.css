@@ -2667,7 +2667,7 @@ body.reserved-game-active {
   height: 100%;
   object-fit: fill;
   opacity: 1;
-  filter: saturate(1.28) contrast(1.16) brightness(.58);
+  filter: saturate(1.36) contrast(1.12) brightness(.76);
   pointer-events: none;
   user-select: none;
 }
@@ -2683,7 +2683,7 @@ body.reserved-game-active {
   object-fit: cover;
   object-position: center 100%;
   opacity: .96;
-  filter: saturate(1.12) contrast(1.2) brightness(.46);
+  filter: saturate(1.24) contrast(1.16) brightness(.66);
   -webkit-mask-image: linear-gradient(to top, #000 0 72%, transparent 100%);
   mask-image: linear-gradient(to top, #000 0 72%, transparent 100%);
   pointer-events: none;
@@ -2696,9 +2696,9 @@ body.reserved-game-active {
   z-index: 3;
   pointer-events: none;
   background:
-    linear-gradient(to bottom, rgba(0, 0, 0, .08), rgba(0, 0, 0, .28) 48%, rgba(0, 0, 0, .62)),
-    radial-gradient(ellipse at 50% 44%, transparent 19%, rgba(0, 0, 0, .2) 58%, rgba(0, 0, 0, .74) 100%),
-    linear-gradient(to top, rgba(0, 0, 0, .42), transparent 34%);
+    linear-gradient(to bottom, rgba(0, 0, 0, .06), rgba(0, 0, 0, .18) 48%, rgba(0, 0, 0, .46)),
+    radial-gradient(ellipse at 50% 44%, transparent 19%, rgba(0, 0, 0, .16) 58%, rgba(0, 0, 0, .62) 100%),
+    linear-gradient(to top, rgba(0, 0, 0, .28), transparent 34%);
 }
 
 .abyss-mouth {
@@ -2709,7 +2709,7 @@ body.reserved-game-active {
   width: min(86vw, 780px);
   max-width: none;
   opacity: var(--mouth-alpha, .42);
-  transform: translate3d(-50%, calc(-50% + var(--mouth-rise, 16px)), 0) scale(var(--mouth-scale, .66));
+  transform: translate3d(-50%, calc(-50% + var(--mouth-rise, 16px)), 0) scale(var(--mouth-scale, .72));
   transform-origin: 50% 56%;
   filter:
     brightness(.58)
@@ -2742,6 +2742,21 @@ body.reserved-game-active {
     drop-shadow(0 0 8px rgba(126, 255, 45, .86))
     drop-shadow(0 0 18px rgba(26, 255, 165, .38));
   will-change: transform, opacity, filter;
+}
+
+.abyss-eye:disabled {
+  opacity: 1;
+}
+
+.abyss-eye[data-eye-phase="closed"] {
+  cursor: default;
+  filter:
+    drop-shadow(0 0 5px rgba(126, 255, 45, .72))
+    drop-shadow(0 0 12px rgba(26, 255, 165, .28));
+}
+
+.abyss-eye.is-repositioning {
+  transition: left 140ms ease, top 140ms ease;
 }
 
 .abyss-eye img {
@@ -5295,5 +5310,310 @@ body.ip-design-page .scan-lines {
 
   .ip-design-placeholder {
     min-height: min(66vh, 520px);
+  }
+}
+
+body.my-world-page {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body.my-world-page .scan-lines {
+  opacity: .44;
+}
+
+.my-world-shell {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: clamp(22px, 4vw, 44px) clamp(42px, 8vw, 120px);
+}
+
+.my-world-return {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 10010;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  color: #dffeff;
+  background: rgba(3, 5, 24, .72);
+  border: 1px solid rgba(24, 247, 255, .9);
+  box-shadow:
+    0 0 0 1px rgba(255, 176, 46, .58),
+    0 0 16px rgba(24, 247, 255, .34),
+    inset 0 0 16px rgba(24, 247, 255, .12);
+  font: 700 24px/1 "Lucida Console", Monaco, monospace;
+  text-decoration: none;
+  text-shadow: 0 0 8px rgba(24, 247, 255, .72);
+}
+
+.my-world-return:active,
+.my-world-return.is-pressing {
+  transform: translate(var(--press-offset), var(--press-offset));
+}
+
+.my-world-viewer {
+  width: min(1120px, calc(100vw - 260px));
+  min-height: min(760px, calc(100vh - 88px));
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 2.2vw, 30px);
+  background:
+    linear-gradient(135deg, transparent 0 18px, rgba(24, 247, 255, .28) 19px 21px, transparent 22px),
+    linear-gradient(315deg, transparent 0 18px, rgba(255, 176, 46, .22) 19px 21px, transparent 22px),
+    rgba(3, 5, 24, .7);
+  border: 1px solid rgba(24, 247, 255, .82);
+  box-shadow:
+    0 0 0 1px rgba(157, 124, 255, .62),
+    0 0 38px rgba(24, 247, 255, .22),
+    0 0 82px rgba(0, 0, 0, .6),
+    inset 0 0 0 1px rgba(255, 176, 46, .18),
+    inset 0 0 34px rgba(3, 5, 24, .72);
+  backdrop-filter: blur(1px) saturate(1.08);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 16px 100%, 0 calc(100% - 16px), 0 14px);
+}
+
+.my-world-layout {
+  width: 100%;
+  display: grid;
+  gap: clamp(24px, 3vw, 42px);
+}
+
+.my-world-section {
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+}
+
+.my-world-section-head {
+  display: grid;
+  gap: 4px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid rgba(24, 247, 255, .38);
+}
+
+.my-world-section-head p,
+.my-world-section-head h2 {
+  margin: 0;
+  font-family: "Lucida Console", Monaco, monospace;
+}
+
+.my-world-section-head p {
+  color: #ffb02e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.my-world-section-head h2 {
+  color: #dffeff;
+  font-size: clamp(22px, 3.6vw, 42px);
+  line-height: 1.06;
+  text-shadow:
+    0 0 14px rgba(24, 247, 255, .55),
+    0 0 28px rgba(157, 124, 255, .34);
+}
+
+.my-world-section-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 22px);
+  align-items: start;
+}
+
+.my-world-figure {
+  --my-world-image-width: 100%;
+  --my-world-aspect: auto;
+  grid-column: 1 / -1;
+  width: var(--my-world-image-width);
+  max-width: 100%;
+  margin: 0;
+  perspective: 1400px;
+}
+
+.my-world-card {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.my-world-card:focus-visible {
+  outline: 2px solid #ffb02e;
+  outline-offset: 4px;
+}
+
+.my-world-card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.my-world-card.is-flipped .my-world-card-inner {
+  transform: rotateY(180deg);
+}
+
+.my-world-card-face {
+  display: grid;
+  overflow: hidden;
+  backface-visibility: hidden;
+  background: rgba(0, 0, 0, .18);
+  border: 1px solid rgba(24, 247, 255, .34);
+  box-shadow:
+    inset 0 0 22px rgba(24, 247, 255, .06),
+    0 0 20px rgba(157, 124, 255, .12);
+}
+
+.my-world-card-front {
+  position: relative;
+}
+
+.my-world-card-back {
+  position: absolute;
+  inset: 0;
+  align-content: start;
+  gap: 14px;
+  min-height: 100%;
+  padding: clamp(16px, 2vw, 26px);
+  overflow: auto;
+  color: #dffeff;
+  background:
+    linear-gradient(135deg, rgba(157, 124, 255, .18), rgba(3, 5, 24, .92) 42%, rgba(24, 247, 255, .12)),
+    rgba(3, 5, 24, .94);
+  border-color: rgba(255, 176, 46, .58);
+  transform: rotateY(180deg);
+}
+
+.my-world-media,
+.my-world-media img {
+  display: block;
+  width: 100%;
+}
+
+.my-world-media img {
+  height: auto;
+  image-rendering: auto;
+}
+
+.my-world-caption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px 12px;
+  padding: clamp(12px, 1.8vw, 18px);
+  color: #dffeff;
+  background:
+    linear-gradient(90deg, rgba(3, 5, 24, .9), rgba(8, 7, 32, .76)),
+    rgba(3, 5, 24, .88);
+  border-top: 1px solid rgba(24, 247, 255, .28);
+  font-family: "Lucida Console", Monaco, monospace;
+}
+
+.my-world-number {
+  grid-row: span 2;
+  min-width: 42px;
+  color: #ffb02e;
+  font-size: clamp(22px, 3vw, 38px);
+  font-weight: 700;
+  line-height: .92;
+  text-shadow: 0 0 12px rgba(255, 176, 46, .55);
+}
+
+.my-world-caption strong {
+  align-self: end;
+  color: #9d7cff;
+  font-size: clamp(14px, 1.5vw, 18px);
+  line-height: 1.25;
+}
+
+.my-world-caption p {
+  margin: 0;
+  color: rgba(223, 252, 255, .82);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.my-world-prompt-label {
+  color: #ffb02e;
+  font: 700 clamp(18px, 2vw, 28px)/1.1 "Lucida Console", Monaco, monospace;
+  text-shadow: 0 0 12px rgba(255, 176, 46, .46);
+}
+
+.my-world-prompt-text {
+  color: rgba(223, 252, 255, .88);
+  font: 13px/1.76 "Lucida Console", Monaco, monospace;
+  white-space: pre-wrap;
+}
+
+.my-world-figure[data-layout="map"] .my-world-card-face {
+  border-color: rgba(255, 176, 46, .48);
+  box-shadow:
+    0 0 0 1px rgba(24, 247, 255, .16),
+    0 0 26px rgba(255, 176, 46, .14),
+    inset 0 0 24px rgba(24, 247, 255, .08);
+}
+
+.my-world-figure[data-layout="region"],
+.my-world-figure[data-layout="character"] {
+  grid-column: span 6;
+}
+
+.my-world-figure[data-layout="character"] .my-world-card-face {
+  background: rgba(8, 3, 22, .34);
+  border-color: rgba(157, 124, 255, .48);
+}
+
+.my-world-figure[data-state="missing"] {
+  min-height: 260px;
+  border-style: dashed;
+}
+
+@media (max-width: 900px) {
+  .my-world-shell {
+    padding: 70px 12px 18px;
+  }
+
+  .my-world-return {
+    top: 12px;
+    left: 12px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .my-world-viewer {
+    width: calc(100vw - 24px);
+    padding: 12px;
+  }
+
+  .my-world-section-grid {
+    gap: 12px;
+  }
+
+  .my-world-figure[data-layout="region"],
+  .my-world-figure[data-layout="character"] {
+    grid-column: 1 / -1;
+  }
+
+  .my-world-caption {
+    grid-template-columns: 1fr;
+  }
+
+  .my-world-number {
+    grid-row: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-world-card-inner {
+    transition: none;
   }
 }

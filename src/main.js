@@ -4,7 +4,7 @@ const icons = [
   { label: "Contact", icon: "contact.gif", window: "contact", size: "large" },
   { label: "Blog", icon: "blog.gif", window: "blog", size: "xlarge" },
   { label: "IP design", icon: "ip-design.gif", window: "ipDesign" },
-  { label: "My World", icon: "my-world-city.gif", window: "myWorld", size: "city" },
+  { label: "My World", icon: "my-world-city.gif", window: "myWorldPage", size: "city" },
   { label: "Music", icon: "music.gif", window: "music" },
   { label: "Guest book", icon: "guestbook.gif", window: "guest" },
   { label: "AIGC TV", icon: "looptv.gif", window: "aigcTv" },
@@ -210,16 +210,23 @@ let dontClickVirusCount = 0;
 const abyssGameAssets = Object.freeze({
   background: "public/game/data-gate.png",
   river: "public/game/data-river-loop.gif",
-  eye: "public/game/eye-blink-clean.gif",
+  eye: "public/game/eye-blink-closed-first.gif",
   mouth: "public/game/abyss-mouth-clean.png",
   reporter: "public/game/glitch-reporter.png"
 });
 const abyssGameConfig = Object.freeze({
   eyeCount: 15,
   durationMs: 42000,
-  mouthStartScale: 0.66,
-  mouthEndScale: 1.92
+  mouthStartScale: 0.72,
+  mouthEndScale: 1.92,
+  eyeCycleMs: 2250,
+  eyeClosedMs: 1000
 });
+const abyssEyeAnchorPoints = [
+  [12, 20], [28, 16], [48, 19], [70, 15], [86, 23],
+  [18, 42], [37, 38], [61, 40], [79, 45], [10, 68],
+  [29, 72], [47, 61], [66, 70], [86, 66], [55, 83]
+];
 const guestbookStorageKey = "ytmGuestbookEntries";
 const guestbookEntryLimit = 24;
 let guestbookMemoryEntries = null;
@@ -1180,6 +1187,16 @@ function openIpDesignPage() {
   window.location.assign(getIpDesignPageUrl());
 }
 
+function getMyWorldPageUrl() {
+  const params = new URLSearchParams();
+  params.set("wallpaper", getCurrentWallpaperClass());
+  return `my-world.html?${params.toString()}`;
+}
+
+function openMyWorldPage() {
+  window.location.assign(getMyWorldPageUrl());
+}
+
 function setWindowCollapsed(windowElement, collapsed) {
   const body = getActiveWindowBody(windowElement);
   const button = getActiveCollapseButton(windowElement);
@@ -1764,6 +1781,7 @@ function cleanupAbyssEyeGame() {
     window.cancelAnimationFrame(abyssGameState.frame);
   }
 
+  abyssGameState.eyeTimers?.forEach((timerId) => window.clearTimeout(timerId));
   abyssGameState = null;
 }
 
@@ -1774,36 +1792,89 @@ function formatAbyssTime(ms) {
   return `${minutes}:${seconds}`;
 }
 
-function createAbyssEyeButton(index, stageRect) {
-  const button = document.createElement("button");
-  const basePoints = [
-    [12, 20], [28, 16], [48, 19], [70, 15], [86, 23],
-    [18, 42], [37, 38], [61, 40], [79, 45], [10, 68],
-    [29, 72], [47, 61], [66, 70], [86, 66], [55, 83]
-  ];
-  const [baseX, baseY] = basePoints[index % basePoints.length];
+function createAbyssEyePosition(index, stageRect, size, randomize = false) {
   const stageWidth = Math.max(stageRect.width, 320);
   const stageHeight = Math.max(stageRect.height, 360);
-  const size = Math.round(clamp(stageWidth * (0.065 + Math.random() * 0.035), 54, 112));
-  const jitterX = (Math.random() - 0.5) * stageWidth * 0.08;
-  const jitterY = (Math.random() - 0.5) * stageHeight * 0.08;
+  const [baseX, baseY] = randomize
+    ? [9 + Math.random() * 82, 13 + Math.random() * 72]
+    : abyssEyeAnchorPoints[index % abyssEyeAnchorPoints.length];
+  const jitterX = randomize ? 0 : (Math.random() - 0.5) * stageWidth * 0.08;
+  const jitterY = randomize ? 0 : (Math.random() - 0.5) * stageHeight * 0.08;
   const left = clamp(Math.round(stageWidth * baseX / 100 - size / 2 + jitterX), 12, stageWidth - size - 12);
   const top = clamp(Math.round(stageHeight * baseY / 100 - size / 2 + jitterY), 12, stageHeight - size - 12);
-  const delay = Math.round(Math.random() * -1600);
   const drift = Math.round((Math.random() - 0.5) * 14);
+  return { left, top, drift };
+}
+
+function createAbyssEyeButton(index, stageRect) {
+  const button = document.createElement("button");
+  const stageWidth = Math.max(stageRect.width, 320);
+  const size = Math.round(clamp(stageWidth * (0.065 + Math.random() * 0.035), 54, 112));
+  const { left, top, drift } = createAbyssEyePosition(index, stageRect, size);
+  const delay = Math.round(Math.random() * -1600);
 
   button.type = "button";
   button.className = "abyss-eye";
   button.dataset.abyssEye = String(index + 1);
+  button.dataset.eyePhase = "closed";
   button.setAttribute("aria-label", `Clear eye ${index + 1}`);
+  button.disabled = true;
   button.style.left = `${left}px`;
   button.style.top = `${top}px`;
   button.style.width = `${size}px`;
   button.style.setProperty("--eye-drift", `${drift}px`);
   button.style.setProperty("--eye-delay", `${delay}ms`);
-  button.innerHTML = `<img src="${abyssGameAssets.eye}" alt="">`;
+  button.innerHTML = `<img src="${abyssGameAssets.eye}?spawn=${Date.now()}-${index}" alt="">`;
 
   return button;
+}
+
+function queueAbyssEyeTimer(callback, delay) {
+  if (!abyssGameState) return 0;
+
+  const timerId = window.setTimeout(() => {
+    if (!abyssGameState || abyssGameState.status !== "playing") return;
+    callback();
+  }, delay);
+  abyssGameState.eyeTimers.push(timerId);
+  return timerId;
+}
+
+function openAbyssEye(button) {
+  if (!button.isConnected || button.classList.contains("is-cleared")) return;
+
+  button.dataset.eyePhase = "open";
+  button.disabled = false;
+}
+
+function relocateClosedAbyssEye(button, index, stage) {
+  if (!button.isConnected || button.classList.contains("is-cleared")) return;
+
+  const stageRect = stage.getBoundingClientRect();
+  const size = button.offsetWidth || Number.parseFloat(button.style.width) || 72;
+  const { left, top, drift } = createAbyssEyePosition(index, stageRect, size, true);
+  button.dataset.eyePhase = "closed";
+  button.disabled = true;
+  button.classList.add("is-repositioning");
+  button.style.left = `${left}px`;
+  button.style.top = `${top}px`;
+  button.style.setProperty("--eye-drift", `${drift}px`);
+
+  queueAbyssEyeTimer(() => {
+    button.classList.remove("is-repositioning");
+    openAbyssEye(button);
+  }, abyssGameConfig.eyeClosedMs);
+}
+
+function scheduleAbyssEyeRelocation(button, index, stage) {
+  const firstOpenDelay = abyssGameConfig.eyeClosedMs + Math.random() * 90;
+  queueAbyssEyeTimer(() => openAbyssEye(button), firstOpenDelay);
+
+  const loop = () => {
+    relocateClosedAbyssEye(button, index, stage);
+    queueAbyssEyeTimer(loop, abyssGameConfig.eyeCycleMs + Math.random() * 360);
+  };
+  queueAbyssEyeTimer(loop, abyssGameConfig.eyeCycleMs + Math.random() * 420);
 }
 
 function updateAbyssHud() {
@@ -1825,6 +1896,8 @@ function finishAbyssGame(outcome) {
     window.cancelAnimationFrame(state.frame);
     state.frame = 0;
   }
+  state.eyeTimers.forEach((timerId) => window.clearTimeout(timerId));
+  state.eyeTimers = [];
 
   state.stage.classList.add(outcome === "win" ? "is-win" : "is-lose");
   state.eyeLayer.querySelectorAll("[data-abyss-eye]").forEach((eye) => {
@@ -1911,13 +1984,18 @@ function initializeAbyssEyeGame() {
     timerNode,
     clearedNode,
     threatNode,
-    resultNode
+    resultNode,
+    eyeTimers: []
   };
 
+  eyeButtons.forEach((button, index) => {
+    scheduleAbyssEyeRelocation(button, index, stage);
+  });
   updateAbyssHud();
   eyeLayer.addEventListener("click", (event) => {
     const eyeButton = event.target.closest("[data-abyss-eye]");
     if (!eyeButton || !eyeLayer.contains(eyeButton) || !abyssGameState || abyssGameState.status !== "playing") return;
+    if (eyeButton.dataset.eyePhase !== "open") return;
 
     eyeButton.classList.add("is-cleared");
     eyeButton.disabled = true;
@@ -2245,6 +2323,8 @@ document.addEventListener("click", (event) => {
   if (opener) {
     if (opener.dataset.window === "ipDesign") {
       openIpDesignPage();
+    } else if (opener.dataset.window === "myWorldPage") {
+      openMyWorldPage();
     } else if (opener.dataset.window === "aigcTv") {
       openAigcTv();
     } else {
