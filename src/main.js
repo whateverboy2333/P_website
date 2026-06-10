@@ -204,6 +204,8 @@ let aigcTvPromptOpen = false;
 let reservedGameOverlay = null;
 let reservedGameTimer = 0;
 let abyssGameState = null;
+let abyssGamePreloadPromise = null;
+let abyssGameAssetsReady = false;
 let dontClickVirusLayer = null;
 let dontClickVirusInterval = 0;
 let dontClickVirusCount = 0;
@@ -227,6 +229,80 @@ const abyssEyeAnchorPoints = [
   [18, 42], [37, 38], [61, 40], [79, 45], [10, 68],
   [29, 72], [47, 61], [66, 70], [86, 66], [55, 83]
 ];
+
+function waitForAbyssGameDelay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function loadAbyssGameAsset(src) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(src);
+    };
+
+    const decodeAndFinish = () => {
+      if (typeof image.decode === "function") {
+        image.decode().catch(() => {}).finally(finish);
+        return;
+      }
+
+      finish();
+    };
+
+    const timeoutId = window.setTimeout(finish, 8000);
+    image.decoding = "async";
+    image.onload = decodeAndFinish;
+    image.onerror = finish;
+    image.src = src;
+
+    if (image.complete) decodeAndFinish();
+  });
+}
+
+function preloadAbyssGameAssets() {
+  if (!abyssGamePreloadPromise) {
+    abyssGamePreloadPromise = Promise.all(Object.values(abyssGameAssets).map(loadAbyssGameAsset))
+      .then((assets) => {
+        abyssGameAssetsReady = true;
+        return assets;
+      });
+  }
+
+  return abyssGamePreloadPromise;
+}
+
+function waitForAbyssStageImage(image) {
+  if (image.complete && image.naturalWidth > 0) return Promise.resolve(image);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      image.removeEventListener("load", finish);
+      image.removeEventListener("error", finish);
+      resolve(image);
+    };
+
+    const timeoutId = window.setTimeout(finish, 8000);
+    image.addEventListener("load", finish, { once: true });
+    image.addEventListener("error", finish, { once: true });
+  });
+}
+
+function waitForAbyssStageImages(stage) {
+  return Promise.all(Array.from(stage.querySelectorAll("img")).map(waitForAbyssStageImage));
+}
+
 const guestbookStorageKey = "ytmGuestbookEntries";
 const guestbookEntryLimit = 24;
 let guestbookMemoryEntries = null;
@@ -1824,7 +1900,7 @@ function createAbyssEyeButton(index, stageRect) {
   button.style.width = `${size}px`;
   button.style.setProperty("--eye-drift", `${drift}px`);
   button.style.setProperty("--eye-delay", `${delay}ms`);
-  button.innerHTML = `<img src="${abyssGameAssets.eye}?spawn=${Date.now()}-${index}" alt="">`;
+  button.innerHTML = `<img src="${abyssGameAssets.eye}" alt="" draggable="false">`;
 
   return button;
 }
@@ -1952,10 +2028,11 @@ function tickAbyssGame(timestamp) {
   state.frame = window.requestAnimationFrame(tickAbyssGame);
 }
 
-function initializeAbyssEyeGame() {
+async function initializeAbyssEyeGame() {
   if (!reservedGameOverlay) return;
 
   cleanupAbyssEyeGame();
+  const activeOverlay = reservedGameOverlay;
   const stage = reservedGameOverlay.querySelector("[data-abyss-stage]");
   const eyeLayer = reservedGameOverlay.querySelector("[data-abyss-eye-layer]");
   const mouthNode = reservedGameOverlay.querySelector("[data-abyss-mouth]");
@@ -1970,6 +2047,14 @@ function initializeAbyssEyeGame() {
     createAbyssEyeButton(index, stageRect)
   ));
   eyeLayer.append(...eyeButtons);
+
+  await waitForAbyssStageImages(stage);
+  if (reservedGameOverlay !== activeOverlay || !stage.isConnected) return;
+
+  reservedGameOverlay.className = "reserved-game-overlay is-ready";
+  reservedGameOverlay.removeAttribute("aria-busy");
+  reservedGameOverlay.querySelector("[data-abyss-loading]")?.remove();
+  reservedGameOverlay.querySelector("[data-reserved-game-close]")?.focus({ preventScroll: true });
 
   abyssGameState = {
     status: "playing",
@@ -2107,8 +2192,8 @@ function renderReservedGameInterface() {
   if (!reservedGameOverlay) return;
 
   cleanupAbyssEyeGame();
-  reservedGameOverlay.classList.remove("is-intro");
-  reservedGameOverlay.classList.add("is-ready");
+  reservedGameOverlay.className = "reserved-game-overlay is-loading is-preloading";
+  reservedGameOverlay.setAttribute("aria-busy", "true");
   reservedGameOverlay.innerHTML = `
     <div class="reserved-game-shell is-abyss-game">
       <header class="reserved-game-hud">
@@ -2134,9 +2219,38 @@ function renderReservedGameInterface() {
         </section>
       </main>
       <footer class="reserved-game-footer">PLAYER: GUEST_01 / OBJECTIVE: CLEAR 15 GREEN EYES BEFORE THE ABYSS OPENS</footer>
-    </div>`;
-  reservedGameOverlay.querySelector("[data-reserved-game-close]")?.focus({ preventScroll: true });
+    </div>
+    <p class="reserved-game-loading reserved-game-loading-overlay" data-abyss-loading aria-live="polite">\u8f7d\u5165\u4e2d\u3002\u3002\u3002\u3002</p>`;
   initializeAbyssEyeGame();
+}
+
+function showReservedGameLoadingScreen() {
+  if (!reservedGameOverlay) return;
+
+  cleanupAbyssEyeGame();
+  reservedGameOverlay.className = "reserved-game-overlay is-loading";
+  reservedGameOverlay.setAttribute("aria-busy", "true");
+  reservedGameOverlay.innerHTML = `<p class="reserved-game-loading" aria-live="polite">\u8f7d\u5165\u4e2d\u3002\u3002\u3002\u3002</p>`;
+}
+
+function queueReservedGameInterfaceLoad() {
+  if (!reservedGameOverlay) return;
+
+  reservedGameTimer = 0;
+  const overlay = reservedGameOverlay;
+  if (abyssGameAssetsReady) {
+    renderReservedGameInterface();
+    return;
+  }
+
+  showReservedGameLoadingScreen();
+  Promise.all([
+    preloadAbyssGameAssets(),
+    waitForAbyssGameDelay(450)
+  ]).then(() => {
+    if (reservedGameOverlay !== overlay) return;
+    renderReservedGameInterface();
+  });
 }
 
 function openReservedGameExperience(sourcePopup) {
@@ -2163,7 +2277,7 @@ function openReservedGameExperience(sourcePopup) {
     }
 
     if (event.target.closest("[data-abyss-game-retry]")) {
-      renderReservedGameInterface();
+      queueReservedGameInterfaceLoad();
       return;
     }
 
@@ -2172,7 +2286,7 @@ function openReservedGameExperience(sourcePopup) {
     }
   });
 
-  reservedGameTimer = window.setTimeout(renderReservedGameInterface, 1500);
+  reservedGameTimer = window.setTimeout(queueReservedGameInterfaceLoad, 1500);
 }
 
 function createIcon(item) {
