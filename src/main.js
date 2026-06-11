@@ -221,8 +221,8 @@ const abyssGameConfig = Object.freeze({
   durationMs: 42000,
   mouthStartScale: 0.72,
   mouthEndScale: 1.92,
-  eyeCycleMs: 2250,
-  eyeClosedMs: 1000
+  eyeCycleMs: 1490,
+  eyeClosedMs: 280
 });
 const abyssEyeAnchorPoints = [
   [12, 20], [28, 16], [48, 19], [70, 15], [86, 23],
